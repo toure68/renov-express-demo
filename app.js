@@ -245,7 +245,7 @@
   }
   function pdfFile(d) {
     var blob = PDFDevis.build(d).output('blob');
-    var name = 'Devis_' + d.num + '_' + (d.client.name || 'client').replace(/[^\w\-]+/g, '_') + '.pdf';
+    var name = 'Devis_' + d.num + '_RenovExpress.pdf';
     return { blob: blob, name: name };
   }
   function download(f) {
@@ -258,7 +258,8 @@
     var f = pdfFile(d), file;
     try { file = new File([f.blob], f.name, { type: 'application/pdf' }); } catch (e) { file = null; }
     if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: 'Devis ' + d.num + " – Rénov'Express" })
+      // Uniquement le fichier + titre + texte : jamais de paramètre url (ni d'adresse blob:)
+      navigator.share({ files: [file], title: 'Devis ' + d.num + " – Rénov'Express", text: 'Bonjour, voici votre devis ' + d.num + " de Rénov'Express." })
         .catch(function (e) { if (e && e.name !== 'AbortError') download(f); });
     } else {
       toast('Partage non disponible : téléchargement du PDF'); download(f);
