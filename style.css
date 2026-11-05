@@ -67,3 +67,12 @@ details.card summary{font-weight:700;color:var(--petrole);font-size:17px;padding
 .share-mail{background:#e9f2ff;color:#1467b3}
 .share-other{background:#eef1f3;color:var(--petrole)}
 .share-destinations .hint{margin:12px 0 0;font-size:12px}
+
+/* Un seul encadré : intitulé en haut, destinations en bas. */
+.share-destinations{background:var(--petrole);color:#fff;padding:10px 12px 12px}
+.share-main{display:block;width:100%;min-height:48px;border:0;background:transparent;color:#fff;font:700 18px Montserrat,sans-serif;cursor:pointer}
+.share-main:focus-visible{outline:3px solid var(--ocre);border-radius:8px}
+.share-grid{gap:8px}
+.share-destination{min-height:84px;background:#fff;border:0}
+.share-symbol{width:38px;height:38px;font-size:23px}
+.share-destinations .hint{color:#e7eef0}
