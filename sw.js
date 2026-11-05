@@ -1,7 +1,7 @@
 /* Service worker : met toute l'application en cache pour fonctionner sans réseau */
-var VERSION = 'renovexpress-v4';
+var VERSION = 'renovexpress-v5';
 var FILES = [
-  './', 'index.html', 'style.css', 'app.js', 'calc.js', 'pdf.js', 'data.js',
+  './', 'index.html', 'style.css', 'app.js', 'pdf-share.js', 'calc.js', 'pdf.js', 'data.js',
   'lib/jspdf.umd.min.js', 'lib/jspdf.plugin.autotable.min.js',
   'fonts/montserrat-latin-400-normal.woff2', 'fonts/montserrat-latin-600-normal.woff2', 'fonts/montserrat-latin-700-normal.woff2',
   'logo.png', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
