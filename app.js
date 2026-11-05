@@ -305,7 +305,12 @@
       toast('Partage non disponible : téléchargement du PDF'); download(f);
     }
   }
-  $('#btnSend').onclick = function () { if (checkReady(cur)) { saveCur(true); sendDevis(cur); } };
+  $('#btnSend').onclick = function () {
+    if (!checkReady(cur)) return;
+    // Le PDF est déjà prêt grâce aux sauvegardes automatiques/change.
+    // Ne pas exécuter saveCur() ni PDFDevis.build() avant navigator.share().
+    sendDevis(cur);
+  };
   $('#btnDownload').onclick = function () { if (checkReady(cur)) { saveCur(true); download(pdfFile(cur)); } };
 
   /* ---------- 7. MES DEVIS ---------- */
