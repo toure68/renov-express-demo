@@ -313,9 +313,12 @@
   };
   // Même partage PDF fiable que « Envoyer le devis ».
   // iOS ne permet pas de présélectionner WhatsApp : choix dans la feuille native.
-  $('#btnWhatsApp').onclick = function () {
-    if (checkReady(cur)) sendDevis(cur);
-  };
+  ['#btnWhatsApp', '#btnMail', '#btnOtherShare'].forEach(function (selector) {
+    $(selector).onclick = function () {
+      // La feuille iOS permet de choisir l'application, sans injecter de lien.
+      if (checkReady(cur)) sendDevis(cur);
+    };
+  });
   $('#btnDownload').onclick = function () { if (checkReady(cur)) { saveCur(true); download(pdfFile(cur)); } };
 
   /* ---------- 7. MES DEVIS ---------- */
