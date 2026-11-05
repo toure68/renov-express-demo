@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F4E5F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Devis Rénov'">
+<title>Rénov'Express – Devis</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <button id="btnBack" class="back hidden" aria-label="Retour">‹</button>
+  <img src="logo.png" alt="Rénov'Express" class="toplogo" id="topLogo">
+  <h1 id="title">Devis</h1>
+</header>
+
+<main>
+  <!-- ACCUEIL -->
+  <section id="v-home" class="view">
+    <button class="big primary" data-go="new">＋ Nouveau devis</button>
+    <button class="big" data-go="list">📄 Mes devis</button>
+    <button class="big" data-go="tarifs">€ Mes tarifs</button>
+    <p class="hint" id="homeHint"></p>
+  </section>
+
+  <!-- MES TARIFS -->
+  <section id="v-tarifs" class="view hidden">
+    <input type="search" id="tarifSearch" class="field" placeholder="Rechercher une prestation…">
+    <div id="tarifList"></div>
+    <button class="big" id="btnAddTarif">＋ Ajouter un tarif</button>
+    <button class="link danger" id="btnResetTarifs">Remettre les tarifs d'origine</button>
+  </section>
+
+  <!-- ÉDITION D'UN TARIF -->
+  <section id="v-tarif" class="view hidden">
+    <label>Code<input id="t-code" class="field"></label>
+    <label>Prestation<textarea id="t-label" class="field" rows="3"></textarea></label>
+    <label>Unité<input id="t-unit" class="field" placeholder="m², ml, u, forfait…"></label>
+    <label>Prix HT (€) <small>vide = sur devis</small><input id="t-price" class="field" inputmode="decimal"></label>
+    <label>Remarque<textarea id="t-note" class="field" rows="2"></textarea></label>
+    <button class="big primary" id="btnSaveTarif">Enregistrer</button>
+    <button class="link danger" id="btnDelTarif">Supprimer ce tarif</button>
+  </section>
+
+  <!-- DEVIS -->
+  <section id="v-devis" class="view hidden">
+    <div class="numline"><span id="d-num"></span><span id="d-date"></span></div>
+    <details open class="card">
+      <summary>Client</summary>
+      <label>Nom<input id="d-cname" class="field" autocomplete="name"></label>
+      <label>Adresse<textarea id="d-caddr" class="field" rows="2"></textarea></label>
+      <label>Email<input id="d-cmail" class="field" type="email" inputmode="email"></label>
+      <label>Téléphone<input id="d-ctel" class="field" type="tel" inputmode="tel"></label>
+    </details>
+    <details open class="card">
+      <summary>Chantier</summary>
+      <label>Adresse du chantier<textarea id="d-site" class="field" rows="2" placeholder="Identique au client si vide"></textarea></label>
+      <label>Objet<input id="d-obj" class="field" placeholder="Ex. : Peinture séjour et couloir"></label>
+    </details>
+
+    <h2>Prestations</h2>
+    <div id="lines"></div>
+    <button class="big" id="btnAddLine">＋ Ajouter une prestation</button>
+    <button class="big ghost" id="btnAddFree">＋ Ligne libre</button>
+
+    <div class="card">
+      <div class="tva">
+        <span>TVA</span>
+        <button class="seg" data-tva="10">10 %</button>
+        <button class="seg" data-tva="20">20 %</button>
+      </div>
+      <div class="tot"><span>Total HT</span><b id="t-ht"></b></div>
+      <div class="tot"><span id="t-tvalabel">TVA</span><b id="t-tva"></b></div>
+      <div class="tot ttc"><span>Total TTC</span><b id="t-ttc"></b></div>
+      <div class="tot small"><span>Acompte 30 %</span><b id="t-acompte"></b></div>
+    </div>
+
+    <button class="big primary" id="btnSend">Envoyer le devis</button>
+    <button class="big" id="btnDownload">Télécharger le PDF</button>
+    <button class="big ghost" id="btnSave">Enregistrer</button>
+    <p class="hint">Le devis est enregistré automatiquement sur ce téléphone.</p>
+  </section>
+
+  <!-- CHOIX D'UNE PRESTATION -->
+  <section id="v-pick" class="view hidden">
+    <input type="search" id="pickSearch" class="field" placeholder="Rechercher…">
+    <div id="pickList"></div>
+  </section>
+
+  <!-- MES DEVIS -->
+  <section id="v-list" class="view hidden">
+    <input type="search" id="listSearch" class="field" placeholder="Rechercher un client…">
+    <div id="devisList"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="lib/jspdf.plugin.autotable.min.js"></script>
+<script src="data.js"></script>
+<script src="calc.js"></script>
+<script src="pdf.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Déploiement Render : "New > Blueprint" sur le dépôt GitHub, ou "New > Static Site" (Publish directory = .)
+services:
+  - type: web
+    name: renovexpress-devis
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
