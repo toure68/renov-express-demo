@@ -311,6 +311,11 @@
     // Ne pas exécuter saveCur() ni PDFDevis.build() avant navigator.share().
     sendDevis(cur);
   };
+  // Même partage PDF fiable que « Envoyer le devis ».
+  // iOS ne permet pas de présélectionner WhatsApp : choix dans la feuille native.
+  $('#btnWhatsApp').onclick = function () {
+    if (checkReady(cur)) sendDevis(cur);
+  };
   $('#btnDownload').onclick = function () { if (checkReady(cur)) { saveCur(true); download(pdfFile(cur)); } };
 
   /* ---------- 7. MES DEVIS ---------- */
