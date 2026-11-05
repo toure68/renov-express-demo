@@ -83,8 +83,24 @@
     </div>
 
     <button class="big primary" id="btnSend">Envoyer le devis</button>
-    <button class="big" id="btnWhatsApp">Partager le PDF (WhatsApp)</button>
-    <p class="hint">Choisissez WhatsApp dans le menu de partage de l'iPhone.</p>
+    <div class="share-destinations" aria-label="Destinations de partage du PDF">
+      <p class="share-heading">Partager le PDF vers</p>
+      <div class="share-grid">
+        <button type="button" class="share-destination" id="btnWhatsApp" aria-label="Partager le PDF via WhatsApp">
+          <span class="share-symbol share-wa" aria-hidden="true">☏</span>
+          <span>WhatsApp</span>
+        </button>
+        <button type="button" class="share-destination" id="btnMail" aria-label="Partager le PDF via Mail">
+          <span class="share-symbol share-mail" aria-hidden="true">✉</span>
+          <span>Mail</span>
+        </button>
+        <button type="button" class="share-destination" id="btnOtherShare" aria-label="Autres destinations de partage">
+          <span class="share-symbol share-other" aria-hidden="true">↗</span>
+          <span>Autres</span>
+        </button>
+      </div>
+      <p class="hint">Sur iPhone, sélectionnez l’application souhaitée dans le menu de partage.</p>
+    </div>
     <button class="big" id="btnDownload">Télécharger le PDF</button>
     <button class="big ghost" id="btnSave">Enregistrer</button>
     <p class="hint">Le devis est enregistré automatiquement sur ce téléphone.</p>
