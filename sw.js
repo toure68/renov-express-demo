@@ -1,5 +1,5 @@
 /* Service worker : met toute l'application en cache pour fonctionner sans réseau */
-var VERSION = 'renovexpress-v2';
+var VERSION = 'renovexpress-v3';
 var FILES = [
   './', 'index.html', 'style.css', 'app.js', 'calc.js', 'pdf.js', 'data.js',
   'lib/jspdf.umd.min.js', 'lib/jspdf.plugin.autotable.min.js',
