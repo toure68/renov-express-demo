@@ -154,6 +154,7 @@
     var i = devisList.findIndex(function (d) { return d.id === cur.id; });
     if (i >= 0) devisList[i] = clone(cur); else devisList.unshift(clone(cur));
     store(K.devis, devisList);
+    preparePdf(cur);
     if (!silent) toast('Devis ' + cur.num + ' enregistré');
     return true;
   }
@@ -165,6 +166,11 @@
     $(sel).addEventListener('input', function () {
       var f = fields[sel]; (f[0] ? cur[f[0]] : cur)[f[1]] = $(sel).value; autosave();
     });
+  });
+  // Sur iPhone, change survient à la sortie du champ, avant le clic Envoyer.
+  // Cela finalise l'enregistrement et prépare le PDF hors du gestionnaire du clic.
+  Object.keys(fields).forEach(function (sel) {
+    $(sel).addEventListener('change', function () { if (cur) { clearTimeout(saveT); saveCur(true); } });
   });
   function fmtDate(iso) { var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
 
@@ -197,6 +203,7 @@
         if (k === 'price') { var np = l.price === null; card.classList.toggle('warn', np); var n = card.querySelector('.need'); if (n) n.style.display = np ? '' : 'none'; }
         renderTotals(); autosave();
       });
+      inp.addEventListener('change', function () { clearTimeout(saveT); saveCur(true); });
     });
     box.querySelectorAll('[data-del]').forEach(function (b) {
       b.onclick = function () { if (!confirm('Supprimer cette ligne ?')) return; cur.lines.splice(+b.dataset.del, 1); renderLines(); renderTotals(); saveCur(true); };
@@ -248,6 +255,32 @@
     var name = 'Devis_' + d.num + '_RenovExpress.pdf';
     return { blob: blob, name: name };
   }
+  // PDF prégénéré et conservé en mémoire avant toute action de partage.
+  var preparedPdfs = Object.create(null);
+  function pdfSignature(d) {
+    return JSON.stringify([d.num, d.date, d.client, d.site, d.obj, d.lines, d.tva]);
+  }
+  function preparePdf(d) {
+    if (!d || !d.num || !d.client.name.trim() || !d.lines.length ||
+        d.lines.some(function (l) { return Calc.parseNum(l.price) === null; })) {
+      if (d) delete preparedPdfs[d.id];
+      return null;
+    }
+    var sig = pdfSignature(d), cached = preparedPdfs[d.id];
+    if (cached && cached.signature === sig) return cached;
+    try {
+      var f = pdfFile(d);
+      var file = new File([f.blob], f.name, { type: 'application/pdf' });
+      return (preparedPdfs[d.id] = { signature: sig, blob: f.blob, name: f.name, file: file });
+    } catch (e) {
+      delete preparedPdfs[d.id];
+      return null;
+    }
+  }
+  function readyPdf(d) {
+    var entry = preparedPdfs[d.id];
+    return entry && entry.signature === pdfSignature(d) ? entry : null;
+  }
   function download(f) {
     var url = URL.createObjectURL(f.blob), a = document.createElement('a');
     a.href = url; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
@@ -255,12 +288,19 @@
     toast('PDF téléchargé');
   }
   function sendDevis(d) {
-    var f = pdfFile(d), file;
-    try { file = new File([f.blob], f.name, { type: 'application/pdf' }); } catch (e) { file = null; }
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      // Uniquement le fichier + titre + texte : jamais de paramètre url (ni d'adresse blob:)
-      navigator.share({ files: [file], title: 'Devis ' + d.num + " – Rénov'Express", text: 'Bonjour, voici votre devis ' + d.num + " de Rénov'Express." })
-        .catch(function (e) { if (e && e.name !== 'AbortError') download(f); });
+    // Ne jamais construire le PDF ici : Safari exige le geste utilisateur
+    // pour navigator.share, et ne doit recevoir que le fichier PDF.
+    var f = readyPdf(d);
+    if (!f) {
+      toast('PDF non prêt : téléchargement du devis');
+      download(pdfFile(d));
+      return;
+    }
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [f.file] })) {
+      try {
+        navigator.share({ files: [f.file] })
+          .catch(function (e) { if (e && e.name !== 'AbortError') download(f); });
+      } catch (e) { download(f); }
     } else {
       toast('Partage non disponible : téléchargement du PDF'); download(f);
     }
@@ -278,6 +318,8 @@
         '</div></div><div class="p">' + Calc.money(Calc.totals(d).ttc) + '</div></div>' +
         '<div class="actions"><button data-open="' + d.id + '">Ouvrir</button><button data-dup="' + d.id + '">Dupliquer</button><button data-send="' + d.id + '">Renvoyer</button></div></div>';
     }).join('') : '<p class="empty">' + (q ? 'Aucun devis pour ce client' : 'Aucun devis enregistré') + '</p>';
+    // Préparer les fichiers des devis affichés avant le toucher sur « Renvoyer ».
+    list.forEach(preparePdf);
     var find = function (id) { return devisList.find(function (d) { return d.id === id; }); };
     $('#devisList').querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { cur = clone(find(b.dataset.open)); go('devis/' + cur.id); }; });
     $('#devisList').querySelectorAll('[data-dup]').forEach(function (b) {
@@ -294,7 +336,11 @@
   $('#listSearch').oninput = renderList;
 
   /* ---------- Démarrage ---------- */
-  PDFDevis.loadLogo('logo.png');
+  PDFDevis.loadLogo('logo.png').then(function () {
+    // Régénérer après chargement du logo pour que le fichier préchargé le contienne.
+    preparedPdfs = Object.create(null);
+    if (cur && cur.num) preparePdf(cur);
+  });
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
