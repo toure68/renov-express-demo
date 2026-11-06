@@ -1,0 +1,31 @@
+name: Vérifications Rénov'Express V2
+on:
+  push:
+    branches:
+      - 'fix/v2-*'
+  pull_request:
+    branches:
+      - renov-express-v2
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vérifier la syntaxe JavaScript V2
+        run: |
+          node --check v2/app.js
+          node --check v2/workflow.js
+          node --check v2/calc.js
+          node --check v2/pdf.js
+          node --check v2/pdf-share.js
+      - name: Vérifier les calculs existants
+        run: node tests/test_calculs.js
+      - name: Vérifier le workflow V2
+        run: node tests/test_workflow_v2.js
