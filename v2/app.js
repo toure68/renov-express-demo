@@ -177,7 +177,7 @@ function markShared(id){const current=find(id);if(!current)return;const d=clone(
 function sendPDF(d){if(!checkReady(d))return;const f=prepared.get(d.id);if(!f||f.signature!==pdfKey(d)){preparePdf(d);toast('PDF préparé. Touchez à nouveau « Envoyer le devis ».');return;}
  const fallback=()=>{PDFShare.download(f);downloaded.add(d.id);toast('PDF téléchargé. Après votre envoi, confirmez-le dans la fiche.');if(routeKind==='d')route();};
  let native=false;try{native=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[f.file]}));}catch(e){}
- if(native){try{navigator.share({files:[f.file]}).then(()=>markShared(d.id)).catch(e=>{if(e&&e.name!=='AbortError')fallback();});}catch(e){fallback();}}else fallback();
+ if(native){try{navigator.share({files:[f.file]}).then(()=>{downloaded.add(d.id);toast('Partage terminé sur cet appareil. Confirmez uniquement si le devis a bien été envoyé.');if(routeKind==='d')route();}).catch(e=>{if(e&&e.name!=='AbortError')fallback();});}catch(e){fallback();}}else fallback();
 }
 let signatureStrokes=[],signatureActive=null,signatureContext=null;
 function redrawSignature(){const c=$('#signatureCanvas');if(!c)return;const scale=Math.min(devicePixelRatio||1,3),w=c.clientWidth,h=c.clientHeight;c.width=w*scale;c.height=h*scale;const x=c.getContext('2d');x.setTransform(scale,0,0,scale,0,0);x.fillStyle='#fff';x.fillRect(0,0,w,h);x.strokeStyle='#1F4E5F';x.lineWidth=2.4;x.lineCap='round';x.lineJoin='round';signatureStrokes.forEach(ps=>{x.beginPath();ps.forEach((p,i)=>i?x.lineTo(p.x*w,p.y*h):x.moveTo(p.x*w,p.y*h));x.stroke();});signatureContext=x;}
@@ -208,7 +208,7 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(action==='free'){cur.lines.push({code:'',label:'',qty:1,unit:'u',price:null});saveQuote(cur);scrollLast=true;route();return;}
  if(action==='deleteLine'){if(confirm('Supprimer cette prestation ?')){cur.lines.splice(+el.dataset.i,1);saveQuote(cur);route();}return;}
  if(action==='send'){sendPDF(d);return;}if(action==='download'){downloadPDF(d);return;}
- if(action==='confirmSent'){changeStatus(d,'sent');downloaded.delete(d.id);return;}
+ if(action==='confirmSent'){if(confirm('Confirmez-vous avoir réellement envoyé ce devis au client ?')){changeStatus(d,'sent');downloaded.delete(d.id);}return;}
  if(action==='sign'){if(checkReady(d))navigate('sign/'+d.id);return;}
  if(action==='confirmSignature'){confirmSignature(d);return;}
  if(action==='duplicate'){flush();cur=blank();cur.client=clone(d.client);cur.site=d.site;cur.obj=d.obj;cur.lines=clone(d.lines);cur.tva=d.tva;cur.demo=!!d.demo;if(saveQuote(cur)){navigate('edit/'+cur.id);rendreGains();toast('Copie créée avec un nouveau numéro');}return;}
