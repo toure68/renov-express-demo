@@ -23,3 +23,23 @@
 .opt.re-total-ttc{background:var(--ocre);color:var(--anthra);border:0;border-radius:8px;padding-left:10px;padding-right:10px}
 .opt.re-total-ttc b{color:var(--anthra)}
 button:focus-visible,[role=button]:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline-color:var(--ocre)}
+
+/* Boutons non fixés : ils restent à leur place naturelle, en fin de formulaire,
+   et ne masquent plus les champs pendant la saisie. */
+.actbar{position:static!important;background:none!important;margin:18px 0 0!important;padding:0 0 calc(env(safe-area-inset-bottom) + 18px)!important}
+
+/* Boutons avec icônes reconnaissables */
+.cta,.all{display:flex;align-items:center;justify-content:center;gap:9px;width:100%}
+.cta .bi,.all .bi{width:20px;height:20px;flex-shrink:0}
+.re-chx{justify-content:flex-start;gap:12px}.re-chx .bi{color:var(--link)}
+.re-del{display:inline-flex;align-items:center;gap:6px}.re-del .bi{width:17px;height:17px}
+.re-contact{margin-top:14px}
+.re-contact-label{font-size:12.5px;color:var(--muted2);margin:0 0 8px;text-align:left}
+.re-contact-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.re-contact-row a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:72px;border-radius:18px;text-decoration:none;font-size:14px;font-weight:800;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.re-contact-row a .bi{width:30px;height:30px}
+.re-contact-row a:active{transform:scale(.97)}
+.re-wa{background:#25D366;color:#0b3d22!important}
+.re-mail{background:#1a73e8}
+.hero .re-contact{margin-top:14px}
+.re-contact.hv-go{height:auto}
