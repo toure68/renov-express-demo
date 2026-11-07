@@ -214,6 +214,27 @@ function invoiceSummary(d){
  const rest=InvoiceLogic.balance(d),payments=Array.isArray(d.payments)?d.payments:[];
  return'<div class="card"><span class="tag">Facture '+esc(d.invoice.num)+'</span><p>Émise le '+displayDate(d.invoice.issuedAt)+' · Échéance '+displayDate(d.invoice.dueDate)+'</p><div class="opt"><span>Encaissé</span><b>'+Calc.money(InvoiceLogic.paid(d))+'</b></div><div class="opt re-total-ttc"><span>Reste dû</span><b>'+Calc.money(rest)+'</b></div>'+payments.map(p=>'<p class="fine">'+displayDate(p.date)+' · '+esc(p.method)+' : '+Calc.money(p.amount)+'</p>').join('')+'</div><div class="actbar">'+primaryButton('downloadInvoice',d.id,'Télécharger la facture PDF','download')+(rest>0?secondaryButton('payment',d.id,'Enregistrer un règlement','euro'):'')+'</div>';
 }
+function receiveDepositView(d){
+ const existing=InvoiceLogic.paid(d),totalAmount=Calc.totals(d).ttc;
+ const suggested=Math.max(0,Math.min(totalAmount-existing,Calc.totals(d).acompte-existing));
+ return head('Acompte réellement reçu',d.num,d)+demoBadge(d)+
+ '<div class="card"><p>Indiquez le montant <strong>effectivement encaissé</strong>. Aucune somme n’est déduite de la facture sans enregistrement.</p>'+
+ '<div class="opt"><span>Devis TTC</span><b>'+Calc.money(totalAmount)+'</b></div>'+
+ '<div class="opt"><span>Déjà enregistré</span><b>'+Calc.money(existing)+'</b></div>'+
+ field('Montant reçu en euros','p.amount',suggested>0?String(suggested).replace('.',','):'')+
+ field('Date de réception','p.date',localISO(new Date()),'date')+
+ '<label class="re-field">Mode de règlement<select data-field="p.method"><option>Virement</option><option>Carte</option><option>Chèque</option><option>Espèces</option><option>Autre</option></select></label></div>'+
+ '<div class="re-primary-next">'+primaryButton('confirmDeposit',d.id,'Confirmer l’acompte encaissé','check')+'</div>';
+}
+function confirmDeposit(d){
+ const val=k=>{const el=body.querySelector('[data-field="p.'+k+'"]');return el?el.value:'';};
+ try{
+  const updated=InvoiceLogic.recordDeposit(d,val('amount'),val('date'),val('method'));
+  if(!confirm('Confirmez-vous avoir réellement reçu '+Calc.money(InvoiceLogic.paid(updated)-InvoiceLogic.paid(d))+' ?'))return;
+  if(saveQuote(updated)){navigate('d/'+d.id);rendreGains();toast('Acompte enregistré : '+Calc.money(InvoiceLogic.paid(updated)));}
+  else toast('Impossible d’enregistrer cet acompte.');
+ }catch(e){toast(e.message);}
+}
 function paymentView(d){
  return head('Enregistrer un règlement',d.invoice.num,d)+'<div class="card"><p>Solde restant : <b>'+Calc.money(InvoiceLogic.balance(d))+'</b></p>'+
  field('Montant reçu en euros','p.amount',String(InvoiceLogic.balance(d)).replace('.',','))+
@@ -239,7 +260,7 @@ function historyRows(query=''){const q=norm(query),list=F.historyDocuments(D,rou
 function historyView(){const title=routeId==='quotes'?'Mes devis':routeId==='invoices'?'Mes factures':'Historique',sub=routeId==='invoices'?'Factures PDF émises sur cet appareil':routeId==='quotes'?'Historique des devis':'Devis et documents facturés';return head(title,sub)+'<input type="search" class="re-search" id="historySearch" placeholder="Rechercher un client, un numéro…" aria-label="Rechercher un document"><section class="list" id="historyRows">'+historyRows()+'</section>';}
 function signView(d){return head('Signature du client',d.num,d)+'<div class="card"><span class="tag">Bon pour accord</span><h3>'+esc(d.client.name)+'</h3><p>'+esc(d.obj)+'<br><b>'+total(d)+' TTC</b></p>'+demoBadge(d)+'<p>Signez avec votre doigt dans le cadre.</p><canvas id="signatureCanvas" aria-label="Zone de signature au doigt"></canvas><button class="lien re-del" style="margin-top:10px" data-action="clearSignature">'+bi('reset')+'<span>Effacer et recommencer</span></button><label class="re-consent"><input type="checkbox" id="signConsent"><span>J’ai lu ce devis, son montant et ses conditions. <b>Bon pour accord.</b></span></label><p class="re-error" id="signError" role="alert"></p></div><div class="actbar">'+primaryButton('confirmSignature',d.id,'Valider la signature','check')+'</div><p class="fine">Signature et date ajoutées au PDF.</p>';}
 function navigate(hash){flush();if(location.hash.slice(1)===hash)route();else location.hash=hash;}
-function parentRoute(){if(routeKind==='edit'||routeKind==='document'||routeKind==='sign'||routeKind==='options'||routeKind==='status'||routeKind==='payment'||routeKind==='contact')return find(routeId)?'d/'+routeId:'';if(routeKind==='pick')return'edit/'+routeId;if(routeKind==='tarif')return'tarifs';return'';}
+function parentRoute(){if(routeKind==='edit'||routeKind==='document'||routeKind==='sign'||routeKind==='options'||routeKind==='status'||routeKind==='payment'||routeKind==='contact'||routeKind==='receiveDeposit')return find(routeId)?'d/'+routeId:'';if(routeKind==='pick')return'edit/'+routeId;if(routeKind==='tarif')return'tarifs';return'';}
 /* AutoDroits morph: source card -> useful-height panel, then content fade. */
 let originElement=null,originBox=null,originKey=null,contentTimer=null,closeTimer=null,openingFrame=null;
 function geom(){const v=window.visualViewport,w=Math.min(document.documentElement.clientWidth,v?v.width:innerWidth),h=v?v.height:innerHeight,app=document.querySelector('.phone').getBoundingClientRect(),W=Math.min(w,app.width);return{top:v?v.offsetTop:0,left:(v?v.offsetLeft:0)+(w-W)/2,width:W,height:h};}
@@ -316,6 +337,7 @@ function route(){
  if(kind==='pick'){if(!cur||cur.id!==d.id)cur=clone(d);renderSheet(tariffView(true),true);return;}
  if(kind==='contact'){cur=null;renderSheet(contactView(d),true);return;}
   if(kind==='payment'){if(!d.invoice){navigate('d/'+d.id);return;}cur=null;renderSheet(paymentView(d),true);return;}
+ if(kind==='receiveDeposit'){if(d.invoice||!['signed','deposit'].includes(d.status)){navigate('d/'+d.id);return;}cur=null;renderSheet(receiveDepositView(d),true);return;}
  cur=null;preparePdf(d);lastState=F.etatDossier(d);
  if(kind==='d')renderSheet(dossier(d),true);else if(kind==='document')renderSheet(documentView(d),true);else if(kind==='options')renderSheet(optionsView(d),true);else if(kind==='status')renderSheet(statusView(d),true);else if(kind==='sign'&&AppConfig.features.signature){renderSheet(signView(d),true);initSignature();}else navigate('');
 }
@@ -338,7 +360,7 @@ function initSignature(){signatureStrokes=[];signatureActive=null;redrawSignatur
 }
 function confirmSignature(d){const length=signatureStrokes.reduce((sum,ps)=>sum+ps.slice(1).reduce((n,p,i)=>n+Math.hypot(p.x-ps[i].x,p.y-ps[i].y),0),0);if(length<.06){$('#signError').textContent='Tracez votre signature dans le cadre.';return;}if(!$('#signConsent').checked){$('#signError').textContent='Cochez la case « Bon pour accord ».';return;}
  const copy=clone(d),when=new Date().toISOString();copy.signature={data:$('#signatureCanvas').toDataURL('image/png'),name:d.client.name,signedAt:when};copy.status='signed';copy.signedAt=when;if(saveQuote(copy)){navigate('d/'+d.id);rendreGains();toast('Devis signé · signature intégrée au PDF');}}
-function changeStatus(d,status){const copy=clone(d);if(d.invoice)return false;if(status==='invoiced')return issueInvoice(d);if(status!=='draft'&&!checkReady(copy))return false;if(status==='sent'&&!confirm('Confirmez-vous avoir réellement envoyé le devis au client ?'))return false;if(status==='deposit'&&!confirm('Confirmez-vous avoir réellement reçu l’acompte ?'))return false;if(status==='invoiced'&&!confirm('Marquer ce devis comme facturé dans le suivi ? Ceci ne crée PAS de facture PDF ni de numéro de facture.'))return false;if(status==='signed'&&!copy.signature&&!confirm('Confirmez-vous que le client a réellement signé ? Aucune signature électronique ne sera créée.'))return false;if(copy.signature&&['draft','ready','sent'].includes(status)){if(!confirm('Ce changement effacera la signature. Conservez le PDF signé avant de continuer.'))return false;delete copy.signature;delete copy.signedAt;}
+function changeStatus(d,status){const copy=clone(d);if(d.invoice)return false;if(status==='invoiced')return issueInvoice(d);if(status!=='draft'&&!checkReady(copy))return false;if(status==='sent'&&!confirm('Confirmez-vous avoir réellement envoyé le devis au client ?'))return false;if(status==='deposit'){navigate('receiveDeposit/'+d.id);return false;}if(status==='signed'&&!copy.signature&&!confirm('Confirmez-vous que le client a réellement signé ? Aucune signature électronique ne sera créée.'))return false;if(copy.signature&&['draft','ready','sent'].includes(status)){if(!confirm('Ce changement effacera la signature. Conservez le PDF signé avant de continuer.'))return false;delete copy.signature;delete copy.signedAt;}
  copy.status=status==='ready'?'draft':status;const now=new Date().toISOString();if(status==='sent'&&!copy.sentAt)copy.sentAt=now;if(status==='signed'&&!copy.signedAt)copy.signedAt=now;if(status==='deposit'&&!copy.depositAt)copy.depositAt=now;if(status==='invoiced'&&!copy.invoicedAt)copy.invoicedAt=now;if(saveQuote(copy)){navigate('d/'+d.id);rendreGains();toast('Statut : '+LIB[F.etatDossier(copy)]);return true;}return false;}
 function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(action==='back'){navigate(parentRoute());return;}if(action==='backup'){backupData();return;}if(action==='company'){navigate('company');return;}if(action==='saveCompany'){saveCompany();return;}if(action==='explorer'){EXPLORER=!EXPLORER;rendreGains();return;}
@@ -352,8 +374,9 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(!d)return;
  if(['document','options','status','contact'].includes(action)){navigate(action+'/'+d.id);return;}
  if(action==='viewDossier'){navigate('d/'+d.id);return;}
-  if(action==='recordDeposit'){changeStatus(d,'deposit');return;}
- if(action.startsWith('manual-')){changeStatus(d,action.slice(7));return;}
+  if(action==='recordDeposit'){navigate('receiveDeposit/'+d.id);return;}
+ if(action==='confirmDeposit'){confirmDeposit(d);return;}
+ if(action.startsWith('manual-')){if(action==='manual-deposit'){navigate('receiveDeposit/'+d.id);return;}changeStatus(d,action.slice(7));return;}
  if(action==='dossier'){flush();if(!find(d.id)){toast('Ajoutez un nom ou une prestation pour enregistrer ce devis.');return;}navigate('d/'+d.id);return;}
  if(action==='edit'){if(d.invoice||['signed','deposit','invoiced'].includes(d.status)){toast('Devis accepté : créez un duplicata pour toute modification.');return;}navigate('edit/'+d.id);return;}
  if(action==='unlock'){if(d.invoice){toast('Facture émise : modification impossible.');return;}if(confirm('Modifier ce devis effacera sa signature et le remettra en brouillon. Conservez le PDF signé avant de continuer.')){delete cur.signature;delete cur.signedAt;cur.status='draft';saveQuote(cur);route();}return;}
