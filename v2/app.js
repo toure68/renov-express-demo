@@ -139,11 +139,13 @@ function restoreData(file){
   const keys=new Set(tarifs.map(t=>String(t.code||t.label).toLowerCase()));
   const nextT=clone(tarifs);
   obj.tarifs.forEach(t=>{const key=String(t.code||t.label).toLowerCase();if(!keys.has(key)){nextT.push(t);keys.add(key);}});
-  if(!confirm('Importer '+(nextD.length-D.length)+' devis et '+(nextT.length-tarifs.length)+' tarifs nouveaux ? Les données actuelles seront conservées.'))return;
-  const oldD=localStorage.getItem(K.devis),oldT=localStorage.getItem(K.tarifs);
-  try{localStorage.setItem(K.devis,JSON.stringify(nextD));localStorage.setItem(K.tarifs,JSON.stringify(nextT));}
-  catch(e){try{if(oldD===null)localStorage.removeItem(K.devis);else localStorage.setItem(K.devis,oldD);if(oldT===null)localStorage.removeItem(K.tarifs);else localStorage.setItem(K.tarifs,oldT);}catch(_){}toast('Import annulé : stockage indisponible ou saturé');return;}
-  D=nextD;tarifs=nextT;prepared.clear();downloaded.clear();rendreGains();route();toast('Sauvegarde importée sur cet appareil');
+  const importCompany=!localStorage.getItem('re_v2_company')&&obj.company&&typeof obj.company==='object';
+  const restoredCompany=importCompany?Object.fromEntries(companyFields.filter(k=>Object.prototype.hasOwnProperty.call(obj.company,k)&&['string','number'].includes(typeof obj.company[k])).map(k=>[k,obj.company[k]])):null;
+  if(!confirm('Importer '+(nextD.length-D.length)+' devis et '+(nextT.length-tarifs.length)+' tarifs nouveaux'+(restoredCompany?' ainsi que le profil entreprise':'')+' ? Les documents existants seront conservés.'))return;
+  const oldD=localStorage.getItem(K.devis),oldT=localStorage.getItem(K.tarifs),oldC=localStorage.getItem('re_v2_company');
+  try{localStorage.setItem(K.devis,JSON.stringify(nextD));localStorage.setItem(K.tarifs,JSON.stringify(nextT));if(restoredCompany)localStorage.setItem('re_v2_company',JSON.stringify(restoredCompany));}
+  catch(e){try{if(oldD===null)localStorage.removeItem(K.devis);else localStorage.setItem(K.devis,oldD);if(oldT===null)localStorage.removeItem(K.tarifs);else localStorage.setItem(K.tarifs,oldT);if(oldC===null)localStorage.removeItem('re_v2_company');else localStorage.setItem('re_v2_company',oldC);}catch(_){}toast('Import annulé : stockage indisponible ou saturé');return;}
+  D=nextD;tarifs=nextT;if(restoredCompany)Object.assign(COMPANY,restoredCompany);prepared.clear();downloaded.clear();rendreGains();route();toast('Sauvegarde importée sur cet appareil');
  }).catch(e=>toast('Import impossible : '+e.message));
 }
 function issueInvoice(d){
