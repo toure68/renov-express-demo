@@ -27,10 +27,13 @@ jobs:
           node --check v2/pdf-share.js
           node --check v2/invoice.js
           node --check v2/storage-tools.js
+          node --check v2/context-flow.js
       - name: Vérifier les calculs existants
         run: node tests/test_calculs.js
       - name: Vérifier le workflow V2
         run: node tests/test_workflow_v2.js
+      - name: Vérifier le parcours contextuel
+        run: node tests/test_context_flow_v2.js
       - name: Vérifier les factures et sauvegardes locales
         run: node tests/test_invoice_v2.js
       - name: Vérifier les contrats UI CCTP
