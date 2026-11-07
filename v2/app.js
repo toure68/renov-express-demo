@@ -93,12 +93,12 @@ function rendreGains(){rendreHero();const searching=GLOBAL_QUERY.trim().length>0
  $('#gains').innerHTML=visible.map(row).join('')+(list.length?'':'<p class="empty">'+(searching?'Aucun dossier trouvé.':'Aucun devis à suivre pour le moment.')+'</p>');
  $('#quoteExplorer').innerHTML=searching?'':(remaining>0?'<button class="all explorer" data-action="explorer">Explorer · '+remaining+' autre'+(remaining>1?'s':'')+'</button>':EXPLORER&&list.length>3?'<button class="all explorer" data-action="explorer">Réduire</button>':'');
  const quotes=F.historyDocuments(D,'quotes').length,invoices=F.historyDocuments(D,'invoices').length;
- $('#quotesCount').textContent=quotes+' devis';
+ $('#quotesCount').textContent=quotes+' devis';if($('#invoicesArchive'))$('#invoicesArchive').hidden=!AppConfig.features.invoicing;
  $('#invoicesCount').textContent=invoices+' document'+(invoices>1?'s':'')+' facturé'+(invoices>1?'s':'');
 }
 function head(title,sub,d){return'<div class="top">'+back+(d?logo(d,46):'')+'<div class="re-client"><div class="ttl" id="sheetTitle">'+esc(title)+'</div><div class="sub">'+esc(sub||'')+'</div></div></div>';}
 function contextButtons(d){const st=F.etatDossier(d);let action,text;
- if(st==='late'){action='relance';text='Relancer';}else if(st==='ready'){action='send';text='Envoyer le devis';}else if(st==='draft'){action='edit';text='Compléter';}else if(st==='signed'){action='deposit';text='Demander l’acompte';}else if(st==='sent'){action='sign';text='Faire signer le client';}else if(st==='deposit'){action='invoiced';text='Marquer comme facturé';}else{return'<div class="actbar">'+primaryButton('document',d.id,'Voir le devis','eye')+'</div>';}
+ if(st==='late'){action='relance';text='Relancer';}else if(st==='ready'){action='send';text='Envoyer le devis';}else if(st==='draft'){action='edit';text='Compléter';}else if(st==='signed'){action='deposit';text='Demander l’acompte';}else if(st==='sent'&&AppConfig.features.signature){action='sign';text='Faire signer le client';}else if(st==='sent'){action='document';text='Voir le devis';}else if(st==='deposit'){action='invoiced';text='Marquer comme facturé';}else{return'<div class="actbar">'+primaryButton('document',d.id,'Voir le devis','eye')+'</div>';}
  return'<div class="actbar">'+actionHTML(d,action,text)+(downloaded.has(d.id)&&st==='ready'?secondaryButton('confirmSent',d.id,'Confirmer l’envoi','check'):secondaryButton('document',d.id,'Voir le devis','eye'))+'</div>';
 }
 function dossier(d){const st=F.etatDossier(d),info=F.heroInfo(d),amounts=Calc.totals(d),late=st==='late';
@@ -167,14 +167,14 @@ function route(){
  const d=find(id)||(cur&&cur.id===id?cur:null);
  if(!kind){cur=null;closeSheet();rendreGains();return;}
  if(kind==='appearance'){cur=null;renderSheet(appearanceView(),true);return;}
- if(kind==='history'){cur=null;renderSheet(historyView(),true);return;}
+ if(kind==='history'){if(id==='invoices'&&!AppConfig.features.invoicing){navigate('');return;}cur=null;renderSheet(historyView(),true);return;}
  if(kind==='tarifs'){cur=null;renderSheet(tariffView(false),true);return;}
  if(kind==='tarif'){cur=null;renderSheet(editTariffView(+id),true);return;}
  if(!d){navigate('');return;}
  if(kind==='edit'){cur=clone(d);renderSheet(editView(cur),true);if(scrollLast){scrollLast=false;const lines=body.querySelectorAll('.re-line');if(lines.length)lines[lines.length-1].scrollIntoView({block:'center'});}return;}
  if(kind==='pick'){if(!cur||cur.id!==d.id)cur=clone(d);renderSheet(tariffView(true),true);return;}
  cur=null;preparePdf(d);lastState=F.etatDossier(d);
- if(kind==='d')renderSheet(dossier(d),false);else if(kind==='document')renderSheet(documentView(d),true);else if(kind==='options')renderSheet(optionsView(d),false);else if(kind==='status')renderSheet(statusView(d),false);else if(kind==='sign'){renderSheet(signView(d),false);initSignature();}else navigate('');
+ if(kind==='d')renderSheet(dossier(d),false);else if(kind==='document')renderSheet(documentView(d),true);else if(kind==='options')renderSheet(optionsView(d),false);else if(kind==='status')renderSheet(statusView(d),false);else if(kind==='sign'&&AppConfig.features.signature){renderSheet(signView(d),false);initSignature();}else navigate('');
 }
 function checkReady(d){const m=F.missing(d);if(m.length){toast('Il manque : '+m.join(', '));return false;}return true;}
 function pdfKey(d){return JSON.stringify([d.num,d.date,d.client,d.site,d.obj,d.lines,d.tva,d.signature||null]);}
@@ -217,7 +217,7 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(action==='deleteLine'){if(confirm('Supprimer cette prestation ?')){cur.lines.splice(+el.dataset.i,1);saveQuote(cur);route();}return;}
  if(action==='send'){sendPDF(d);return;}if(action==='download'){downloadPDF(d);return;}
  if(action==='confirmSent'){if(changeStatus(d,'sent'))downloaded.delete(d.id);return;}
- if(action==='sign'){if(checkReady(d))navigate('sign/'+d.id);return;}
+ if(action==='sign'){if(!AppConfig.features.signature)return toast('Signature désactivée sur cette version.');if(checkReady(d))navigate('sign/'+d.id);return;}
  if(action==='confirmSignature'){confirmSignature(d);return;}
  if(action==='duplicate'){flush();cur=blank();cur.client=clone(d.client);cur.site=d.site;cur.obj=d.obj;cur.lines=clone(d.lines);cur.tva=d.tva;cur.demo=!!d.demo;if(saveQuote(cur)){navigate('edit/'+cur.id);rendreGains();toast('Copie créée avec un nouveau numéro');}return;}
  if(action==='invoiced'){changeStatus(d,'invoiced');return;}
@@ -225,7 +225,7 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
 document.addEventListener('click',e=>{
  const theme=e.target.closest('[data-theme-choice]');if(theme){const saved=Appearance.select(theme.dataset.themeChoice);route();toast(saved?'Thème mémorisé':'Thème appliqué · mémorisation indisponible');return;}
  const contact=e.target.closest('[data-contact]');if(contact){if(contact.dataset.contact==='email'&&/^mailto:\?/.test(contact.getAttribute('href')))toast('Pas d’email pour ce client : choisissez le destinataire dans votre messagerie.');return;}
- const archive=e.target.closest('[data-history]');if(archive){navigate('history/'+archive.dataset.history);return;}
+ const archive=e.target.closest('[data-history]');if(archive){if(archive.dataset.history==='invoices'&&!AppConfig.features.invoicing)return; navigate('history/'+archive.dataset.history);return;}
  const act=e.target.closest('[data-action]');if(act){doAction(act.dataset.action,act.dataset.id||routeId,act);return;}
  const status=e.target.closest('[data-status]');if(status){changeStatus(find(status.dataset.id),status.dataset.status);return;}
  const tva=e.target.closest('[data-tva]');if(tva&&cur&&!cur.signature){cur.tva=+tva.dataset.tva;$('#editTotals').innerHTML=totalsHTML(cur);body.querySelectorAll('[data-tva]').forEach(b=>b.classList.toggle('on',+b.dataset.tva===cur.tva));saveQuote(cur);return;}
@@ -248,6 +248,7 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Tab'&&sheet.classList.contains('open')){const all=[...sheet.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(x=>x.getClientRects().length),first=all[0],last=all[all.length-1];if(e.shiftKey&&el===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&el===last){e.preventDefault();first.focus();}}
 });
 const search=$('#globalSearch'),clearSearch=$('#clearGlobalSearch');if(search){search.addEventListener('input',()=>{GLOBAL_QUERY=search.value;clearSearch.hidden=!GLOBAL_QUERY;rendreGains();});if(clearSearch)clearSearch.onclick=()=>{search.value='';GLOBAL_QUERY='';clearSearch.hidden=true;rendreGains();search.focus();};}
+document.addEventListener('pointerdown',e=>{if(e.target.closest('button,.act,.svc')&&typeof navigator.vibrate==='function')navigator.vibrate(8);},{passive:true});
 $('#appearance').onclick=()=>navigate('appearance');$('#newQuote').onclick=newQuote;$('#tarifs').onclick=()=>navigate('tarifs');$('#history').onclick=()=>navigate('history');backdrop.onclick=()=>navigate('');
 let grabY=null,grabDelta=0;$('#grab').addEventListener('pointerdown',e=>{grabY=e.clientY;grabDelta=0;$('#grab').setPointerCapture(e.pointerId);});$('#grab').addEventListener('pointermove',e=>{if(grabY!==null)grabDelta=e.clientY-grabY;});$('#grab').addEventListener('pointerup',()=>{if(grabY===null)return;grabY=null;if(grabDelta>80)navigate(parentRoute());else if(grabDelta<-40||Math.abs(grabDelta)<6){expandSheet();}});
 body.addEventListener('scroll',()=>{if(body.scrollTop>12){expandSheet();}});
