@@ -117,7 +117,66 @@ function tariffRows(filter,pick){const q=norm(filter);return tarifs.map((t,i)=>(
 function tariffView(pick){return head(pick?'Choisir une prestation':'Mes tarifs',pick?'Ajouter au devis':'Tarifs modifiables')+'<input type="search" class="re-search" id="tarifSearch" placeholder="Rechercher une prestation…" aria-label="Rechercher une prestation"><section class="list" id="tarifRows">'+tariffRows('',pick)+'</section>'+(pick?'':'<div class="actbar">'+primaryButton('newTarif','','Ajouter un tarif','plus')+secondaryButton('resetTarifs','','Remettre les tarifs d’origine','reset')+'</div>');}
 function editTariffView(idx){const t=tarifs[idx]||{code:'',label:'',unit:'',price:null,note:''};return head(tarifs[idx]?'Modifier le tarif':'Ajouter un tarif','Mes tarifs')+'<div class="card">'+field('Code','t.code',t.code)+field('Prestation','t.label',t.label,'text',true)+field('Unité','t.unit',t.unit)+field('Prix HT € · vide = sur devis','t.price',t.price===null?'':String(t.price).replace('.',','))+field('Remarque','t.note',t.note,'text',true)+'</div><div class="actbar">'+primaryButton('saveTarif',idx,'Enregistrer le tarif','save')+(tarifs[idx]?secondaryButton('deleteTarif',idx,'Supprimer ce tarif','trash'):'')+'</div>';}
 function statusView(d){return head('Changer le statut',d.num,d)+'<div class="card"><div class="chxs">'+[['draft','Brouillon'],['sent','Envoyé (confirmation manuelle)'],['signed','Signé (confirmation manuelle)'],['deposit','Acompte reçu'],['invoiced','Facturé (suivi uniquement)']].map(([st,label])=>'<button class="chx" data-status="'+st+'" data-id="'+d.id+'">'+label+(F.etatDossier(d)===st?ico('check'):'')+'</button>').join('')+'</div></div><p class="fine">Les statuts manuels ne vérifient pas le paiement ou la signature du client.</p>';}
-function backupData(){const payload={format:'renov-express-v2-backup',version:1,exportedAt:new Date().toISOString(),devis:D,tarifs};try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RenovExpress_sauvegarde_'+localISO(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast('Sauvegarde téléchargée. Conservez-la dans un emplacement privé.');}catch(e){toast('Impossible de créer la sauvegarde.');}}
+function backupData(){const payload={format:'renov-express-v2-backup',version:1,exportedAt:new Date().toISOString(),devis:D,tarifs,company:clone(COMPANY)};try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RenovExpress_sauvegarde_'+localISO(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast('Sauvegarde téléchargée. Conservez-la dans un emplacement privé.');}catch(e){toast('Impossible de créer la sauvegarde.');}}
+function companyView(){
+ const labels={name:'Raison sociale',activity:'Activité',address:'Adresse',city:'Code postal et ville',phone:'Téléphone',email:'Email professionnel',siret:'SIRET (14 chiffres)',tvaIntra:'TVA intracommunautaire',rcs:'RCS / capital',insurer:'Assureur',insurerPolicy:'Numéro de police',insurerZone:'Zone de couverture',mediator:'Médiateur consommation',payment:'Conditions de paiement'};
+ return head('Mon entreprise','Coordonnées utilisées dans les PDF')+'<div class="card"><p>Vérifiez les informations légales avant d’émettre un document réel. Les données d’origine sont fictives.</p>'+Object.keys(labels).map(k=>field(labels[k],'c.'+k,COMPANY[k]||'',k==='email'?'email':'text',k==='payment')).join('')+'</div><div class="actbar">'+primaryButton('saveCompany','','Enregistrer mon entreprise','save')+'</div>';
+}
+function saveCompany(){
+ const next=clone(COMPANY),keys=companyFields.filter(k=>!['validityDays','depositRate'].includes(k));
+ for(const k of keys){const el=body.querySelector('[data-field="c.'+k+'"]');if(el)next[k]=el.value.trim();}
+ if(next.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(next.email))return toast('Adresse email professionnelle invalide');
+ if(next.siret&&!/^(\\d[\\s]*){14}$/.test(next.siret))return toast('SIRET : 14 chiffres attendus');
+ if(!store('re_v2_company',next))return;
+ Object.assign(COMPANY,next);prepared.clear();toast('Entreprise enregistrée · les futurs PDF sont actualisés');navigate('appearance');
+}
+function restoreData(file){
+ if(!file)return;
+ if(file.size>20*1024*1024){toast('Sauvegarde trop volumineuse (20 Mo max).');return;}
+ file.text().then(raw=>{
+  const obj=JSON.parse(raw);StorageTools.validate(obj);
+  const nextD=StorageTools.merge(D,obj);
+  const keys=new Set(tarifs.map(t=>String(t.code||t.label).toLowerCase()));
+  const nextT=clone(tarifs);
+  obj.tarifs.forEach(t=>{const key=String(t.code||t.label).toLowerCase();if(!keys.has(key)){nextT.push(t);keys.add(key);}});
+  if(!confirm('Importer '+(nextD.length-D.length)+' devis et '+(nextT.length-tarifs.length)+' tarifs nouveaux ? Les données actuelles seront conservées.'))return;
+  const oldD=localStorage.getItem(K.devis),oldT=localStorage.getItem(K.tarifs);
+  try{localStorage.setItem(K.devis,JSON.stringify(nextD));localStorage.setItem(K.tarifs,JSON.stringify(nextT));}
+  catch(e){try{if(oldD===null)localStorage.removeItem(K.devis);else localStorage.setItem(K.devis,oldD);if(oldT===null)localStorage.removeItem(K.tarifs);else localStorage.setItem(K.tarifs,oldT);}catch(_){}toast('Import annulé : stockage indisponible ou saturé');return;}
+  D=nextD;tarifs=nextT;prepared.clear();downloaded.clear();rendreGains();route();toast('Sauvegarde importée sur cet appareil');
+ }).catch(e=>toast('Import impossible : '+e.message));
+}
+function issueInvoice(d){
+ if(!AppConfig.features.invoicing)return false;
+ if(!InvoiceLogic.isValidIssuer(COMPANY)){toast('Renseignez d’abord les coordonnées réelles et le SIRET de votre entreprise.');navigate('company');return false;}
+ if(!confirm('Créer une facture numérotée et verrouiller ce devis ? Vérifiez les mentions légales et le montant avant de continuer.'))return false;
+ try{const next=InvoiceLogic.issue(d,D,COMPANY);if(!saveQuote(next))return false;navigate('d/'+d.id);rendreGains();toast('Facture '+next.invoice.num+' créée sur cet appareil');return true;}
+ catch(e){toast(e.message);return false;}
+}
+function invoiceSummary(d){
+ if(!d.invoice)return '';
+ const rest=InvoiceLogic.balance(d),payments=Array.isArray(d.payments)?d.payments:[];
+ return'<div class="card"><span class="tag">Facture '+esc(d.invoice.num)+'</span><p>Émise le '+displayDate(d.invoice.issuedAt)+' · Échéance '+displayDate(d.invoice.dueDate)+'</p><div class="opt"><span>Encaissé</span><b>'+Calc.money(InvoiceLogic.paid(d))+'</b></div><div class="opt re-total-ttc"><span>Reste dû</span><b>'+Calc.money(rest)+'</b></div>'+payments.map(p=>'<p class="fine">'+displayDate(p.date)+' · '+esc(p.method)+' : '+Calc.money(p.amount)+'</p>').join('')+'</div><div class="actbar">'+primaryButton('downloadInvoice',d.id,'Télécharger la facture PDF','download')+(rest>0?secondaryButton('payment',d.id,'Enregistrer un règlement','euro'):'')+'</div>';
+}
+function paymentView(d){
+ return head('Enregistrer un règlement',d.invoice.num,d)+'<div class="card"><p>Solde restant : <b>'+Calc.money(InvoiceLogic.balance(d))+'</b></p>'+
+ field('Montant reçu en euros','p.amount',String(InvoiceLogic.balance(d)).replace('.',','))+
+ field('Date du règlement','p.date',localISO(new Date()),'date')+
+ '<label class="re-field">Moyen de règlement<select data-field="p.method"><option>Virement</option><option>Carte</option><option>Chèque</option><option>Espèces</option><option>Autre</option></select></label></div><div class="actbar">'+primaryButton('savePayment',d.id,'Confirmer le règlement','check')+'</div>';
+}
+function savePayment(d){
+ const val=k=>body.querySelector('[data-field="p.'+k+'"]').value;
+ try{
+  const updated=InvoiceLogic.addPayment(d,val('amount'),val('date'),val('method'));
+  if(!confirm('Confirmez-vous avoir réellement reçu ce règlement ?'))return;
+  if(saveQuote(updated)){navigate('d/'+d.id);rendreGains();toast('Règlement enregistré');}
+ }catch(e){toast(e.message);}
+}
+function downloadInvoice(d){
+ if(!d.invoice)return toast('Facture non disponible.');
+ try{const pdf=InvoiceLogic.buildPDF(d);PDFShare.download(PDFShare.prepare(pdf.output('blob'),'Facture_'+d.invoice.num+'_RenovExpress.pdf'));toast('PDF de la facture téléchargé');}
+ catch(e){toast('PDF facture indisponible : '+e.message);}
+}
 function demoSection(){const n=D.filter(d=>d.demo).length;return'<h2>Mode démonstration</h2><div class="card"><p style="margin-top:0">'+(n?'Les '+n+' devis d’exemple (Claire Dubois, Paul Martin…) sont fictifs. Ils servent seulement à montrer l’application. Retirez-les dès que vous travaillez avec vos vrais clients : vos propres devis sont conservés.':'Les exemples fictifs sont retirés. Seuls vos vrais devis apparaissent.')+'</p>'+(n?primaryButton('demoOff','','Retirer les exemples fictifs','trash'):secondaryButton('demoOn','','Remettre les exemples fictifs','reset'))+'</div><p class="fine">Les boutons WhatsApp et Email ouvrent vos vraies applications avec le message déjà écrit : vous choisissez le destinataire et vous envoyez vous-même.</p>';}
 function appearanceView(){return head('Réglages','Fond d’écran et démonstration')+'<h2>Fond d’écran</h2><div class="theme-list">'+Appearance.themes.map(t=>'<button class="chx theme-option" data-theme-choice="'+t.id+'" aria-pressed="'+(Appearance.selected===t.id)+'"><span class="theme-swatch" style="background:'+t.swatch+'" aria-hidden="true"></span><span class="theme-label"><span>'+t.name+'</span><small>'+t.description+'</small></span>'+(Appearance.selected===t.id?ico('check'):'')+'</button>').join('')+'</div><p class="fine">Le fond choisi est mémorisé sur cet appareil.</p><h2>Sauvegarde de vos données</h2><div class="card"><p>Les devis et tarifs sont enregistrés sur cet appareil uniquement. Exportez une copie privée avant de changer de navigateur ou de téléphone.</p>'+primaryButton('backup','','Télécharger une sauvegarde','download')+'</div>'+demoSection();}
 function historyRows(query=''){const q=norm(query),list=F.historyDocuments(D,routeId).filter(d=>!q||norm(d.client.name+' '+d.num+' '+d.obj).includes(q)).sort(F.ordre);return list.map(row).join('')||'<p class="empty">'+(q?'Aucun document trouvé.':routeId==='invoices'?'Aucun document marqué « Facturé » pour le moment.':'Aucun devis enregistré.')+'</p>';}
