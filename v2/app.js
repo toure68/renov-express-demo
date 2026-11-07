@@ -87,8 +87,8 @@ function contactButtons(d,kind,text,extra=''){
  if(!whatsapp&&!mail)return'<div class="re-contact '+extra+'"><p class="re-contact-label">Ajoutez un numéro de téléphone ou un e-mail pour contacter le client.</p>'+secondaryButton('edit',d.id,'Renseigner les coordonnées','pen')+'</div>';
  return'<div class="re-contact '+extra+'"><p class="re-contact-label">'+esc(text)+' par :</p><div class="re-contact-row">'+whatsapp+mail+'</div><p class="fine">L’envoi reste à confirmer dans votre messagerie.</p></div>';
 }
-const ACTION_ICON={send:'send',edit:'pen',sign:'sign',invoiced:'euro',document:'eye'};
-function actionHTML(d,action,text,extra=''){return action==='relance'||action==='deposit'?contactButtons(d,action,text,extra):primaryButton(action,d.id,text,ACTION_ICON[action]).replace('class="cta"','class="cta '+extra+'"');}
+const ACTION_ICON={send:'send',edit:'pen',sign:'sign',invoiced:'euro',document:'eye',contact:'send',confirmSent:'check',issueInvoice:'euro',payment:'euro',downloadInvoice:'download'};
+function actionHTML(d,action,text,extra=''){const next=action==='relance'||action==='deposit'?'contact':action;return primaryButton(next,d.id,esc(text),ACTION_ICON[next]||'check').replace('class="cta"','class="cta '+extra+'"');}
 function rendreHero(){const h=$('#hero'),d=F.prioritaire(D);HEROD=d;
  if(!d){h.className='hero';h.innerHTML='<div class="lbl">Mes devis</div>'+(demoActive()?'<div class="demo">Démonstration · fictif</div>':'')+'<div class="amount">'+Calc.money(D.filter(x=>['sent','late'].includes(F.etatDossier(x))).reduce((n,x)=>n+Calc.totals(x).ttc,0))+'</div><div class="paid">'+esc(summary())+'</div>';return;}
  const info=F.heroInfo(d);h.className='hero vedette'+(F.etatDossier(d)==='late'?' alerte':'');
@@ -208,7 +208,7 @@ function historyRows(query=''){const q=norm(query),list=F.historyDocuments(D,rou
 function historyView(){const title=routeId==='quotes'?'Mes devis':routeId==='invoices'?'Mes factures':'Historique',sub=routeId==='invoices'?'Factures PDF émises sur cet appareil':routeId==='quotes'?'Historique des devis':'Devis et documents facturés';return head(title,sub)+'<input type="search" class="re-search" id="historySearch" placeholder="Rechercher un client, un numéro…" aria-label="Rechercher un document"><section class="list" id="historyRows">'+historyRows()+'</section>';}
 function signView(d){return head('Signature du client',d.num,d)+'<div class="card"><span class="tag">Bon pour accord</span><h3>'+esc(d.client.name)+'</h3><p>'+esc(d.obj)+'<br><b>'+total(d)+' TTC</b></p>'+demoBadge(d)+'<p>Signez avec votre doigt dans le cadre.</p><canvas id="signatureCanvas" aria-label="Zone de signature au doigt"></canvas><button class="lien re-del" style="margin-top:10px" data-action="clearSignature">'+bi('reset')+'<span>Effacer et recommencer</span></button><label class="re-consent"><input type="checkbox" id="signConsent"><span>J’ai lu ce devis, son montant et ses conditions. <b>Bon pour accord.</b></span></label><p class="re-error" id="signError" role="alert"></p></div><div class="actbar">'+primaryButton('confirmSignature',d.id,'Valider la signature','check')+'</div><p class="fine">Signature et date ajoutées au PDF.</p>';}
 function navigate(hash){flush();if(location.hash.slice(1)===hash)route();else location.hash=hash;}
-function parentRoute(){if(routeKind==='edit'||routeKind==='document'||routeKind==='sign'||routeKind==='options'||routeKind==='status'||routeKind==='payment')return find(routeId)?'d/'+routeId:'';if(routeKind==='pick')return'edit/'+routeId;if(routeKind==='tarif')return'tarifs';return'';}
+function parentRoute(){if(routeKind==='edit'||routeKind==='document'||routeKind==='sign'||routeKind==='options'||routeKind==='status'||routeKind==='payment'||routeKind==='contact')return find(routeId)?'d/'+routeId:'';if(routeKind==='pick')return'edit/'+routeId;if(routeKind==='tarif')return'tarifs';return'';}
 /* AutoDroits morph: source card -> useful-height panel, then content fade. */
 let originElement=null,originBox=null,originKey=null,contentTimer=null,closeTimer=null,openingFrame=null;
 function geom(){const v=window.visualViewport,w=Math.min(document.documentElement.clientWidth,v?v.width:innerWidth),h=v?v.height:innerHeight,app=document.querySelector('.phone').getBoundingClientRect(),W=Math.min(w,app.width);return{top:v?v.offsetTop:0,left:(v?v.offsetLeft:0)+(w-W)/2,width:W,height:h};}
@@ -260,6 +260,7 @@ function route(){
  if(!d){navigate('');return;}
  if(kind==='edit'){if(d.invoice){toast('Une facture émise est verrouillée. Dupliquez le devis pour le modifier.');navigate('d/'+d.id);return;}cur=clone(d);renderSheet(editView(cur),true);if(scrollLast){scrollLast=false;const lines=body.querySelectorAll('.re-line');if(lines.length)lines[lines.length-1].scrollIntoView({block:'center'});}return;}
  if(kind==='pick'){if(!cur||cur.id!==d.id)cur=clone(d);renderSheet(tariffView(true),true);return;}
+ if(kind==='contact'){cur=null;renderSheet(contactView(d),false);return;}
   if(kind==='payment'){if(!d.invoice){navigate('d/'+d.id);return;}cur=null;renderSheet(paymentView(d),false);return;}
  cur=null;preparePdf(d);lastState=F.etatDossier(d);
  if(kind==='d')renderSheet(dossier(d),false);else if(kind==='document')renderSheet(documentView(d),true);else if(kind==='options')renderSheet(optionsView(d),false);else if(kind==='status')renderSheet(statusView(d),false);else if(kind==='sign'&&AppConfig.features.signature){renderSheet(signView(d),false);initSignature();}else navigate('');
@@ -295,7 +296,9 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(action==='demoOff'){if(!confirm('Retirer les devis d’exemple fictifs ? Vos propres devis sont conservés.'))return;const next=D.filter(x=>!x.demo);if(store(K.devis,next)){D=next;store(K.demo,'off');rendreGains();route();toast('Exemples fictifs retirés');}return;}
  if(action==='demoOn'){const have=new Set(D.map(x=>x.id)),next=D.concat(demonstration().filter(x=>!have.has(x.id)));if(store(K.devis,next)){D=next;store(K.demo,'on');rendreGains();route();toast('Exemples fictifs remis');}return;}
  if(!d)return;
- if(['document','options','status'].includes(action)){navigate(action+'/'+d.id);return;}
+ if(['document','options','status','contact'].includes(action)){navigate(action+'/'+d.id);return;}
+ if(action==='recordDeposit'){changeStatus(d,'deposit');return;}
+ if(action.startsWith('manual-')){changeStatus(d,action.slice(7));return;}
  if(action==='dossier'){flush();if(!find(d.id)){toast('Ajoutez un nom ou une prestation pour enregistrer ce devis.');return;}navigate('d/'+d.id);return;}
  if(action==='edit'){if(d.invoice){toast('Facture émise : dupliquez pour modifier.');return;}navigate('edit/'+d.id);return;}
  if(action==='unlock'){if(d.invoice){toast('Facture émise : modification impossible.');return;}if(confirm('Modifier ce devis effacera sa signature et le remettra en brouillon. Conservez le PDF signé avant de continuer.')){delete cur.signature;delete cur.signedAt;cur.status='draft';saveQuote(cur);route();}return;}
