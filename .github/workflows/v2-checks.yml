@@ -38,3 +38,27 @@ jobs:
         run: node tests/test_invoice_v2.js
       - name: Vérifier les contrats UI CCTP
         run: node tests/test_cctp_ui.js
+
+  navigateur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Installer Chromium de test
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.58.2
+          npx playwright install chromium --with-deps
+      - name: Recette navigateur (ordinateur + téléphone simulé + avion)
+        run: node tests/browser_v2.js
+      - name: Publier le rapport d’essais
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recette-navigateur-v2
+          path: tests/browser-results.json
+          if-no-files-found: ignore
