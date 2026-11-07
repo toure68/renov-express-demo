@@ -19,3 +19,44 @@
 :root{--brand-primary:#1F4E5F;--brand-accent:#1FA774}
 #homeStatusFilter{background:var(--brand-primary)}
 .global-search input:focus-visible{outline-color:var(--brand-accent)}
+
+/* Entête dossiers : titre à gauche, filtre discret à droite.
+   L'indication de démonstration reste sous le titre sans pousser le filtre.
+   Fonctionne même sur les écrans iPhone étroits. */
+.h2d{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  column-gap:10px;
+  row-gap:0;
+  width:100%;
+  min-width:0;
+}
+.h2d-heading{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.h2d-heading h2{margin:0;min-width:0;line-height:1.3;font-size:clamp(14px,3.6vw,17px);white-space:normal}
+.h2d-heading .ex{display:block;font-size:10.5px;line-height:1.25;letter-spacing:.01em;margin:0}
+.h2d-heading .ex:empty{display:none}
+#homeStatusFilter{
+  display:block;
+  align-self:center;
+  justify-self:end;
+  box-sizing:border-box;
+  width:clamp(91px,26vw,126px);
+  max-width:126px;
+  min-width:91px;
+  min-height:48px;
+  margin:0;
+  padding:9px 28px 9px 11px;
+  border-radius:14px;
+  color:#f1f8fb;
+  border:1px solid rgba(160,200,217,.3);
+  background-color:var(--brand-primary,#1F4E5F);
+  font-size:12px;
+  font-weight:750;
+  text-overflow:ellipsis;
+}
+@media(max-width:340px){
+  .h2d{column-gap:7px}
+  #homeStatusFilter{min-width:86px;width:86px;padding-left:8px;padding-right:19px}
+  .h2d-heading h2{font-size:14px}
+}
