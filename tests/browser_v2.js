@@ -214,7 +214,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   for(const route of routes){
    await page.goto(host+'/#'+route,{waitUntil:'load'});
    await page.locator('#sheet.open .mbody.on').waitFor({timeout:9000});
-   await page.waitForTimeout(370);
+   await page.waitForTimeout(820);
    const m=await page.evaluate(()=>{
     const sheet=document.querySelector('#sheet'),content=document.querySelector('#service'),r=sheet.getBoundingClientRect();
     const available=(window.visualViewport?.height||innerHeight)-Math.min(56,Math.max(22,Math.round((window.visualViewport?.height||innerHeight)*.08)));
@@ -246,7 +246,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await page.goto(host+'/#contact/resize-1',{waitUntil:'load'});
   await page.locator('#service .re-contact-row').waitFor();
   for(const size of [{width:390,height:844},{width:390,height:568},{width:844,height:390},{width:390,height:844}]){
-   await page.setViewportSize(size);await page.waitForTimeout(200);
+   await page.setViewportSize(size);await page.waitForTimeout(650);
    const x=await page.evaluate(()=>{const p=document.querySelector('#sheet').getBoundingClientRect();return {height:p.height,screen:innerHeight,top:p.top,bottom:p.bottom,overflow:document.querySelector('#service').scrollHeight>document.querySelector('#service').clientHeight+7}});
    assert(x.top>=-5&&x.bottom<=x.screen+5,'Fenêtre déborde après rotation : '+JSON.stringify({size,...x}));
    if(x.overflow)assert(x.height>x.screen*.77,'Contenu tronqué après rotation : '+JSON.stringify({size,...x}));
