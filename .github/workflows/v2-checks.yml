@@ -40,7 +40,7 @@ jobs:
         run: node tests/test_cctp_ui.js
 
   navigateur:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Récupérer le code
