@@ -40,7 +40,7 @@
   if(!d||!d.invoice)throw Error('Aucune facture émise');
   const n=Number(String(amount).replace(',','.'));
   if(!Number.isFinite(n)||n<=0)throw Error('Montant incorrect');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))||Number.isNaN(new Date(date+'T12:00:00').getTime()))throw Error('Date de règlement incorrecte');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))||Number.isNaN(new Date(date+'T12:00:00').getTime())||new Date(date+'T12:00:00').toISOString().slice(0,10)!==date)throw Error('Date de règlement incorrecte');
   if(cents(n)>cents(balance(d)))throw Error('Le montant dépasse le solde restant');
   const doc=clone(d);doc.payments=doc.payments||[];
   doc.payments.push({amount:round(n),date,method:String(method||'Autre').slice(0,60),createdAt:new Date().toISOString()});
