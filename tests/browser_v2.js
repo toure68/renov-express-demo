@@ -256,6 +256,62 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   }
   assert.deepEqual(errors,[]);await context.close();
  });
+ await run('Conformité capture iPhone : Relancer via carte et bouton = même grande fenêtre',async()=>{
+  const overdue=sample('relaunch-same','sent',{sentAt:'2026-10-20T09:00:00Z',demo:true});
+  const {page,context,errors}=await contextPage([overdue],{mobile:true});
+  const measure=async()=>page.evaluate(()=>{
+   const s=document.querySelector('#sheet'),b=document.querySelector('#service'),r=s.getBoundingClientRect();
+   const viewport=window.visualViewport?.height||innerHeight;
+   return {route:location.hash,height:r.height,viewport,top:r.top,big:s.classList.contains('big'),half:s.classList.contains('half'),visible:!!b.querySelector('.back'),title:b.querySelector('.ttl')?.textContent||b.innerText.slice(0,50)};
+  });
+  await click(page,'#hero.vedette .hv-d');
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  await page.waitForTimeout(500);
+  const dossier=await measure();
+  assert.equal(dossier.route,'#d/relaunch-same');
+  assert(dossier.height>dossier.viewport*.84,'Fiche trop petite '+JSON.stringify(dossier));
+  await page.goto(host+'/#',{waitUntil:'load'});
+  await click(page,'#hero.vedette [data-action="contact"]');
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  await page.waitForTimeout(500);
+  const contact=await measure();
+  assert.equal(contact.route,'#contact/relaunch-same');
+  assert(contact.title.includes('Relancer le client'),'Mauvais panneau '+JSON.stringify(contact));
+  assert(Math.abs(contact.height-dossier.height)<3,'Taille incohérente carte / bouton : '+JSON.stringify({dossier,contact}));
+  assert.equal(contact.half,false);
+  await page.screenshot({path:'tests/screenshots/08-relance-plein-ecran.png'});
+  assert.deepEqual(errors,[]);
+  await context.close();
+ });
+ await run('Conformité navigation : toutes les fenêtres et actions utilisent le grand panneau',async()=>{
+  const base=sample('all-ready'),sent=sample('all-sent','sent',{sentAt:new Date().toISOString()});
+  const signed=sample('all-signed','signed',{signedAt:new Date().toISOString()});
+  const invoice={num:'F2026-060',issuedAt:'2026-11-07T12:00:00Z',dueDate:'2026-12-07',totals:{ht:100,tva:20,ttc:120,acompte:36},issuer,client:base.client,lines:base.lines};
+  const billed=sample('all-billed','invoiced',{invoice,payments:[]});
+  const {page,context,errors}=await contextPage([base,sent,signed,billed],{mobile:true});
+  const routes=['d/all-ready','contact/all-signed','payment/all-billed','options/all-ready','status/all-ready','sign/all-sent','document/all-ready','edit/all-ready','tarifs','tarif/0','appearance','company','history/quotes','history/invoices'];
+  for(const route of routes){
+   await page.goto(host+'/#'+route,{waitUntil:'load'});
+   await page.locator('#sheet.open.big .mbody.on').waitFor({timeout:8000});
+   await page.waitForTimeout(120);
+   const m=await page.evaluate(()=>{
+    const sheet=document.querySelector('#sheet'),r=sheet.getBoundingClientRect();
+    return {height:r.height,viewport:window.visualViewport?.height||innerHeight,top:r.top,half:sheet.classList.contains('half')};
+   });
+   assert(!m.half&&m.height>m.viewport*.83,'Panneau mal dimensionné '+route+' : '+JSON.stringify(m));
+  }
+  // Même garantie via le bouton principal, pas seulement une URL directe.
+  await page.goto(host+'/#d/all-signed',{waitUntil:'load'});
+  await click(page,'#service [data-action="contact"]');
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  assert.equal(new URL(page.url()).hash,'#contact/all-signed');
+  await page.goto(host+'/#d/all-billed',{waitUntil:'load'});
+  await click(page,'#service [data-action="payment"]');
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  assert.equal(new URL(page.url()).hash,'#payment/all-billed');
+  assert.deepEqual(errors,[]);
+  await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
