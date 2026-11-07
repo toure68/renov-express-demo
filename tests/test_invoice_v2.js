@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 global.Calc=require('../v2/calc.js');
 const Invoice=require('../v2/invoice.js');
 const Storage=require('../v2/storage-tools.js');
-const issuer={name:'Entreprise BTP Réelle',address:'1 rue du Bâtiment',city:'75001 Paris',siret:'12345678901234',insurer:'Assurance test',email:'contact@exemple.fr',payment:'Virement à 30 jours'};
+const issuer={name:'Entreprise BTP Réelle',address:'1 rue du Bâtiment',city:'75001 Paris',siret:'12345678901234',insurer:'Assurance test',email:'contact@btp.fr',payment:'Virement à 30 jours'};
 function devis(id='q1'){return{id,status:'signed',num:'D2026-100',client:{name:'Client',addr:'2 rue de Paris'},obj:'Travaux',site:'Paris',lines:[{label:'Peinture',qty:2,unit:'m²',price:75}],tva:20,demo:false};}
 assert.equal(Invoice.isValidIssuer(issuer),true);
 assert.equal(Invoice.isValidIssuer({...issuer,siret:'000 000 000 00000 (fictif)'}),false);
