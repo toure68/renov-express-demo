@@ -126,7 +126,7 @@ function saveCompany(){
  const next=clone(COMPANY),keys=companyFields.filter(k=>!['validityDays','depositRate'].includes(k));
  for(const k of keys){const el=body.querySelector('[data-field="c.'+k+'"]');if(el)next[k]=el.value.trim();}
  if(next.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(next.email))return toast('Adresse email professionnelle invalide');
- if(next.siret&&!/^(\\d[\\s]*){14}$/.test(next.siret))return toast('SIRET : 14 chiffres attendus');
+ // Profil enregistrable progressivement. Facturation bloquée tant que le SIRET n'est pas réel et valide.
  if(!store('re_v2_company',next))return;
  Object.assign(COMPANY,next);prepared.clear();toast('Entreprise enregistrée · les futurs PDF sont actualisés');navigate('appearance');
 }
