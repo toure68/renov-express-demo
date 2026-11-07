@@ -273,7 +273,7 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(['document','options','status'].includes(action)){navigate(action+'/'+d.id);return;}
  if(action==='dossier'){flush();if(!find(d.id)){toast('Ajoutez un nom ou une prestation pour enregistrer ce devis.');return;}navigate('d/'+d.id);return;}
  if(action==='edit'){if(d.invoice){toast('Facture émise : dupliquez pour modifier.');return;}navigate('edit/'+d.id);return;}
- if(action==='unlock'){if(confirm('Modifier ce devis effacera sa signature et le remettra en brouillon. Conservez le PDF signé avant de continuer.')){delete cur.signature;delete cur.signedAt;cur.status='draft';saveQuote(cur);route();}return;}
+ if(action==='unlock'){if(d.invoice){toast('Facture émise : modification impossible.');return;}if(confirm('Modifier ce devis effacera sa signature et le remettra en brouillon. Conservez le PDF signé avant de continuer.')){delete cur.signature;delete cur.signedAt;cur.status='draft';saveQuote(cur);route();}return;}
  if(action==='save'){if(saveQuote(cur)){navigate('d/'+cur.id);rendreGains();toast('Devis enregistré');}else toast('Ajoutez un nom ou une prestation.');return;}
  if(action==='pick'){navigate('pick/'+d.id);return;}
  if(action==='free'){cur.lines.push({code:'',label:'',qty:1,unit:'u',price:null});saveQuote(cur);scrollLast=true;route();return;}
@@ -282,6 +282,9 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(action==='confirmSent'){if(changeStatus(d,'sent'))downloaded.delete(d.id);return;}
  if(action==='sign'){if(!AppConfig.features.signature)return toast('Signature désactivée sur cette version.');if(checkReady(d))navigate('sign/'+d.id);return;}
  if(action==='confirmSignature'){confirmSignature(d);return;}
+  if(action==='downloadInvoice'){downloadInvoice(d);return;}
+  if(action==='payment'){navigate('payment/'+d.id);return;}
+  if(action==='savePayment'){savePayment(d);return;}
  if(action==='duplicate'){flush();cur=blank();cur.client=clone(d.client);cur.site=d.site;cur.obj=d.obj;cur.lines=clone(d.lines);cur.tva=d.tva;cur.demo=!!d.demo;if(saveQuote(cur)){navigate('edit/'+cur.id);rendreGains();toast('Copie créée avec un nouveau numéro');}return;}
  if(action==='invoiced'||action==='issueInvoice'){issueInvoice(d);return;}
 }
@@ -304,7 +307,7 @@ document.addEventListener('input',e=>{const inp=e.target;
  else if(key.startsWith('line.')){const [,i,k]=key.split('.');cur.lines[+i][k]=['qty','price'].includes(k)?Calc.parseNum(inp.value):inp.value;const card=inp.closest('[data-line]');card.querySelector('[data-line-total]').textContent=Calc.money(Calc.lineTotalCents(cur.lines[+i])/100);$('#editTotals').innerHTML=totalsHTML(cur);}
  else cur[key]=inp.value;persistEdit();
 });
-document.addEventListener('change',e=>{if(cur&&routeKind==='edit'&&e.target.dataset.field)flush();});
+document.addEventListener('change',e=>{if(e.target.id==='restoreInput'){const file=e.target.files&&e.target.files[0];restoreData(file);e.target.value='';return;}if(cur&&routeKind==='edit'&&e.target.dataset.field)flush();});
 document.addEventListener('keydown',e=>{
  const el=e.target;if(el.matches('.row[role="button"]')&&['Enter',' '].includes(e.key)){e.preventDefault();el.click();}
  if(e.key==='Escape'&&sheet.classList.contains('open'))navigate(parentRoute());
