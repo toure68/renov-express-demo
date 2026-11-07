@@ -254,6 +254,10 @@ function sourceElement(){if(originElement&&originElement.isConnected)return orig
 // Capture before navigation or a save can recreate the home cards.
 document.addEventListener('click',e=>{const el=e.target.closest('#gains .row,#documents .svc,#hero.vedette,.actions .act,#history,#appearance');if(el&&!sheet.contains(el))rememberOrigin(el);},true);
 function renderSheet(html,full){
+ // Règle de navigation : toutes les fiches et actions utilisent le même
+ // panneau haut et accessible, quelle que soit l'origine du clic.
+ // Une fenêtre courte conserve de l'espace libre mais jamais une hauteur réduite.
+ full=true;
  const wasOpen=sheet.classList.contains('open');clearTimeout(contentTimer);clearTimeout(closeTimer);if(openingFrame)cancelAnimationFrame(openingFrame);
  if(!wasOpen)focusBefore=document.activeElement;
  const G=geom(),h=measurePanel(html,full),target={top:G.top+G.height-h,left:G.left,width:G.width,height:h};
@@ -292,10 +296,10 @@ function route(){
  if(!d){navigate('');return;}
  if(kind==='edit'){if(d.invoice||['signed','deposit','invoiced'].includes(d.status)){toast('Dossier accepté : dupliquez le devis pour modifier sans altérer l’original.');navigate('d/'+d.id);return;}cur=clone(d);renderSheet(editView(cur),true);if(scrollLast){scrollLast=false;const lines=body.querySelectorAll('.re-line');if(lines.length)lines[lines.length-1].scrollIntoView({block:'center'});}return;}
  if(kind==='pick'){if(!cur||cur.id!==d.id)cur=clone(d);renderSheet(tariffView(true),true);return;}
- if(kind==='contact'){cur=null;renderSheet(contactView(d),false);return;}
-  if(kind==='payment'){if(!d.invoice){navigate('d/'+d.id);return;}cur=null;renderSheet(paymentView(d),false);return;}
+ if(kind==='contact'){cur=null;renderSheet(contactView(d),true);return;}
+  if(kind==='payment'){if(!d.invoice){navigate('d/'+d.id);return;}cur=null;renderSheet(paymentView(d),true);return;}
  cur=null;preparePdf(d);lastState=F.etatDossier(d);
- if(kind==='d')renderSheet(dossier(d),false);else if(kind==='document')renderSheet(documentView(d),true);else if(kind==='options')renderSheet(optionsView(d),false);else if(kind==='status')renderSheet(statusView(d),false);else if(kind==='sign'&&AppConfig.features.signature){renderSheet(signView(d),false);initSignature();}else navigate('');
+ if(kind==='d')renderSheet(dossier(d),true);else if(kind==='document')renderSheet(documentView(d),true);else if(kind==='options')renderSheet(optionsView(d),true);else if(kind==='status')renderSheet(statusView(d),true);else if(kind==='sign'&&AppConfig.features.signature){renderSheet(signView(d),true);initSignature();}else navigate('');
 }
 function checkReady(d){const m=F.missing(d);if(m.length){toast('Il manque : '+m.join(', '));return false;}return true;}
 function pdfKey(d){return JSON.stringify([d.num,d.date,d.client,d.site,d.obj,d.lines,d.tva,d.signature||null]);}
