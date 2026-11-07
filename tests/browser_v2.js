@@ -203,6 +203,59 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert.equal(await page.locator('#service [data-contact="email"]').count(),1);
   assert.deepEqual(errors,[]);await context.close();
  });
+ await run('Conformité fenêtres : hauteur, boutons visibles et design sur mobile compact',async()=>{
+  const quote=sample('geometry-ready');
+  const signed=sample('geometry-signed','signed',{signedAt:new Date().toISOString()});
+  const invoice={num:'F2026-009',issuedAt:'2026-11-07T09:00:00Z',dueDate:'2026-12-07',totals:{ht:100,tva:20,ttc:120,acompte:36},issuer,client:quote.client,lines:quote.lines};
+  const billed=sample('geometry-billed','invoiced',{invoice,payments:[{amount:36,date:'2026-11-07',method:'Acompte',kind:'deposit'}]});
+  const {page,context,errors}=await contextPage([quote,signed,billed],{mobile:true});
+  await page.setViewportSize({width:375,height:667});
+  const routes=['d/geometry-ready','d/geometry-signed','d/geometry-billed','contact/geometry-signed','options/geometry-ready','status/geometry-ready','payment/geometry-billed','sign/geometry-ready','edit/geometry-ready','tarifs','tarif/0','appearance','company','history/quotes','document/geometry-ready'];
+  for(const route of routes){
+   await page.goto(host+'/#'+route,{waitUntil:'load'});
+   await page.locator('#sheet.open .mbody.on').waitFor({timeout:9000});
+   await page.waitForTimeout(820);
+   const m=await page.evaluate(()=>{
+    const sheet=document.querySelector('#sheet'),content=document.querySelector('#service'),r=sheet.getBoundingClientRect();
+    const available=(window.visualViewport?.height||innerHeight)-Math.min(56,Math.max(22,Math.round((window.visualViewport?.height||innerHeight)*.08)));
+    const overflow=content.scrollHeight>content.clientHeight+7;
+    const buttons=[...content.querySelectorAll('.cta,.chx,.all,.back')].filter(b=>{
+      // Un bouton dans un <details> fermé est volontairement secondaire :
+      // son rectangle DOM ne signifie pas qu'il soit réellement affiché.
+      if(b.closest('details:not([open])')&&!b.closest('summary'))return false;
+      const cs=getComputedStyle(b),rect=b.getBoundingClientRect();
+      return cs.display!=='none'&&cs.visibility!=='hidden'&&rect.width>0&&rect.height>0;
+    }).map(b=>{const box=b.getBoundingClientRect(),style=getComputedStyle(b);return {text:(b.innerText||b.getAttribute('aria-label')||'').slice(0,50),height:box.height,bottom:box.bottom,top:box.top,radius:parseFloat(style.borderTopLeftRadius)};});
+    return {panelHeight:r.height,panelTop:r.top,panelBottom:r.bottom,available,overflow,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight,buttons};
+   });
+   assert(m.panelHeight<=m.available+4,route+': fenêtre hors de l’écran : '+JSON.stringify(m));
+   assert(!m.overflow||m.panelHeight>=m.available*.91,route+': fenêtre petite malgré du contenu caché : '+JSON.stringify(m));
+   for(const b of m.buttons){
+    assert(b.height>=43,route+': bouton tactile trop petit '+JSON.stringify(b));
+    assert(b.radius>=10,route+': bouton vieilli / angle trop carré '+JSON.stringify(b));
+    if(!m.overflow)assert(b.bottom<=m.panelBottom+5&&b.top>=m.panelTop-5,route+': bouton caché sans défilement nécessaire '+JSON.stringify(b));
+   }
+   if(route==='contact/geometry-signed'){
+    assert.equal(await page.locator('#service .re-wa').count(),1);
+    assert.equal(await page.locator('#service .re-mail').count(),1);
+   }
+   if(route==='d/geometry-billed')await page.screenshot({path:'tests/screenshots/06-fiche-adaptative-mobile.png'});
+   if(route==='contact/geometry-signed')await page.screenshot({path:'tests/screenshots/07-contact-moderne.png'});
+  }
+  assert.deepEqual(errors,[]);await context.close();
+ });
+ await run('Conformité fenêtres : ajustement après changement de taille et orientation',async()=>{
+  const {page,context,errors}=await contextPage([sample('resize-1','signed')],{mobile:true});
+  await page.goto(host+'/#contact/resize-1',{waitUntil:'load'});
+  await page.locator('#service .re-contact-row').waitFor();
+  for(const size of [{width:390,height:844},{width:390,height:568},{width:844,height:390},{width:390,height:844}]){
+   await page.setViewportSize(size);await page.waitForTimeout(650);
+   const x=await page.evaluate(()=>{const p=document.querySelector('#sheet').getBoundingClientRect();return {height:p.height,screen:innerHeight,top:p.top,bottom:p.bottom,overflow:document.querySelector('#service').scrollHeight>document.querySelector('#service').clientHeight+7}});
+   assert(x.top>=-5&&x.bottom<=x.screen+5,'Fenêtre déborde après rotation : '+JSON.stringify({size,...x}));
+   if(x.overflow)assert(x.height>x.screen*.77,'Contenu tronqué après rotation : '+JSON.stringify({size,...x}));
+  }
+  assert.deepEqual(errors,[]);await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});

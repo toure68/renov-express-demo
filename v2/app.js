@@ -228,8 +228,27 @@ function geom(){const v=window.visualViewport,w=Math.min(document.documentElemen
 const HAUT=()=>Math.min(56,Math.max(22,Math.round(geom().height*.08)));
 function setBox(el,b){for(const p in b)el.style[p]=b[p]+'px';}
 function boxOf(el){if(!el)return null;const r=el.getBoundingClientRect();return{top:r.top,left:r.left,width:r.width,height:r.height};}
-function measurePanel(html,full){const G=geom();if(full)return G.height-HAUT();const m=document.createElement('div');m.className='mbody half on';m.setAttribute('aria-hidden','true');m.inert=true;
- m.style.cssText='position:absolute;visibility:hidden;left:0;top:0;width:'+G.width+'px;height:auto;overflow:visible';m.innerHTML=html;document.body.appendChild(m);const h=m.offsetHeight;m.remove();return Math.min(h+2,G.height-HAUT());}
+function measurePanel(html,full){
+ const G=geom(),available=Math.max(140,G.height-HAUT());
+ if(full)return available;
+ // Mesurer à la largeur réelle du téléphone : les boutons et libellés peuvent
+ // se répartir sur plusieurs lignes et augmenter la hauteur du contenu.
+ const m=document.createElement('div');
+ m.className='mbody half on';m.setAttribute('aria-hidden','true');m.inert=true;
+ m.style.cssText='position:fixed;visibility:hidden;pointer-events:none;left:-10000px;top:0;width:'+G.width+'px;height:auto;max-height:none;overflow:visible;transform:none;';
+ m.innerHTML=html;document.body.appendChild(m);
+ const natural=Math.ceil(Math.max(m.scrollHeight,m.getBoundingClientRect().height)+14);
+ m.remove();
+ // Une fiche riche prend quasiment tout l'écran dès l'ouverture au lieu
+ // d'afficher un minuscule tiroir dont les boutons restent cachés.
+ return natural>available*.62?available:Math.min(available,Math.max(190,natural));
+}
+function fitSheetContent(){
+ if(!sheet.classList.contains('open')||!sheet.classList.contains('half'))return;
+ // Les polices, grilles et images réelles peuvent différer de la mesure :
+ // si le contenu déborde malgré tout, la fenêtre s'agrandit automatiquement.
+ if(body.scrollHeight>body.clientHeight+6)expandSheet();
+}
 function rememberOrigin(el){originElement=el;originBox=boxOf(el);originKey=el.dataset.open?{quote:el.dataset.open}:el.id?{id:el.id}:null;}
 function sourceElement(){if(originElement&&originElement.isConnected)return originElement;if(originKey){if(originKey.id)return document.getElementById(originKey.id);return [...document.querySelectorAll('#gains [data-open]')].find(el=>el.dataset.open===originKey.quote)||null;}return null;}
 // Capture before navigation or a save can recreate the home cards.
@@ -247,8 +266,8 @@ function renderSheet(html,full){
  }else{sheet.className='morph open';}
  sheet.classList.add(full?'big':'half');
  const reveal=()=>{body.classList.add('on');const close=body.querySelector('.back');if(close)close.focus({preventScroll:true});};
- if(wasOpen){setBox(sheet,target);requestAnimationFrame(reveal);}else{
-  openingFrame=requestAnimationFrame(()=>{openingFrame=null;setBox(sheet,target);contentTimer=setTimeout(reveal,260);});
+ if(wasOpen){setBox(sheet,target);requestAnimationFrame(()=>{reveal();requestAnimationFrame(fitSheetContent);});}else{
+  openingFrame=requestAnimationFrame(()=>{openingFrame=null;setBox(sheet,target);contentTimer=setTimeout(()=>{reveal();requestAnimationFrame(fitSheetContent);},260);});
  }
 }
 function expandSheet(){if(!sheet.classList.contains('open')||!sheet.classList.contains('half'))return;const G=geom(),t=HAUT();sheet.classList.remove('half');sheet.classList.add('big');body.classList.remove('half');setBox(sheet,{top:G.top+t,left:G.left,width:G.width,height:G.height-t});}
@@ -362,7 +381,7 @@ let grabY=null,grabDelta=0;$('#grab').addEventListener('pointerdown',e=>{grabY=e
 body.addEventListener('scroll',()=>{if(body.scrollTop>12){expandSheet();}});
 function refreshClock(){rendreGains();const d=find(routeId);if(routeKind==='d'&&d&&F.etatDossier(d)!==lastState)route();}
 addEventListener('hashchange',route);addEventListener('pagehide',flush);document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();else refreshClock();});let viewportFrame=null;
-function fitViewport(){if(viewportFrame)cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{viewportFrame=null;originBox=boxOf(sourceElement()||$('#hero'));if(sheet.classList.contains('open')){const G=geom(),h=sheet.classList.contains('big')?G.height-HAUT():measurePanel(body.innerHTML,false);sheet.style.transition='none';setBox(sheet,{top:G.top+G.height-h,left:G.left,width:G.width,height:h});sheet.getBoundingClientRect();sheet.style.transition='';}if(routeKind==='sign')redrawSignature();});}
+function fitViewport(){if(viewportFrame)cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{viewportFrame=null;originBox=boxOf(sourceElement()||$('#hero'));if(sheet.classList.contains('open')){const G=geom(),h=sheet.classList.contains('big')?G.height-HAUT():measurePanel(body.innerHTML,false);sheet.style.transition='none';setBox(sheet,{top:G.top+G.height-h,left:G.left,width:G.width,height:h});sheet.getBoundingClientRect();sheet.style.transition='';fitSheetContent();}if(routeKind==='sign')redrawSignature();});}
 addEventListener('resize',fitViewport);addEventListener('orientationchange',fitViewport);if(screen.orientation?.addEventListener)screen.orientation.addEventListener('change',fitViewport);if(window.visualViewport){visualViewport.addEventListener('resize',fitViewport);visualViewport.addEventListener('scroll',fitViewport);}setInterval(refreshClock,60000);
 const network=()=>$('#horsligne').hidden=navigator.onLine!==false;addEventListener('online',network);addEventListener('offline',network);network();
 PDFDevis.loadLogo('logo.png').then(()=>{prepared.clear();D.forEach(preparePdf);});
