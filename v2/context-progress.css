@@ -1,0 +1,26 @@
+/* Parcours métier contextuel : un seul état et une seule action à la fois.
+   Accueil inchangé, styles limités aux fiches et formulaires. */
+.re-progress{margin:13px 0 17px;padding:13px 15px 15px;border-radius:17px;background:var(--control-bg,rgba(255,255,255,.07));border:1px solid rgba(255,255,255,.15)}
+.re-progress-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 0 12px}
+.re-progress-caption{color:var(--muted2,#c0ccdc);font-weight:600;font-size:12px}
+.re-progress-current{color:var(--ocre,#e3a72f);font-size:16px;font-weight:800;line-height:1.25;text-align:right}
+.re-progress-alert{color:var(--alert,#ffa6a6)}
+.re-progress-track{height:11px;border-radius:999px;background:rgba(155,174,193,.19);overflow:hidden}
+.re-progress-track span{height:100%;display:block;background:linear-gradient(90deg,var(--brand-primary,#1F4E5F),var(--brand-accent,#48caa6));border-radius:999px;transition:width .28s ease}
+.re-primary-next{margin:18px 0 13px;padding:0 0 2px}
+.re-primary-next .cta{min-height:56px;width:100%;font-size:16px;border-radius:16px;letter-spacing:.01em}
+.re-summary{padding:18px 16px}
+.re-summary-label{font-size:14px;font-weight:600;line-height:1.4;opacity:.85;margin-bottom:7px}
+.re-summary-total{font-size:27px;font-weight:800;line-height:1.2;letter-spacing:-.035em}
+.re-summary-hint{font-size:13px;opacity:.8;line-height:1.5;margin:11px 0 0}
+.re-summary .opt{margin-top:12px}
+.re-more{border-radius:14px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.035);margin:12px 0 18px;padding:0 13px}
+.re-more summary{cursor:pointer;min-height:49px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:700;color:var(--link,#acd1fb);list-style:none}
+.re-more summary::-webkit-details-marker{display:none}
+.re-more summary::after{content:'⌄';font-size:19px;line-height:1;transform:rotate(0);transition:transform .2s}
+.re-more[open] summary::after{transform:rotate(180deg)}
+.re-extra{padding:4px 0 15px}
+.re-more .all{margin-top:8px;min-height:48px}
+.re-contact-row.re-one-channel{grid-template-columns:1fr}
+.re-contact-row a:focus-visible{outline:2px solid var(--brand-accent,#3bc5a0);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.re-progress-track span,.re-more summary::after{transition:none}}
