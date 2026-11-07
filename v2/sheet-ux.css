@@ -25,3 +25,24 @@
  .morph .card{margin-top:10px}
 }
 @media(prefers-reduced-motion:reduce){.morph .cta,.morph .re-contact-row a{transition:none}}
+
+/* Actions prioritaires : informations complètes et directement accessibles. */
+.re-action-context{margin:16px 0 12px;padding:18px;border:1px solid rgba(145,197,216,.23);background:linear-gradient(145deg,rgba(38,90,109,.34),rgba(15,29,47,.73));border-radius:20px}
+.re-action-identity{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 14px}
+.re-action-identity strong{font-size:19px;line-height:1.35;color:#fff}
+.re-action-label{color:#b0d6e7;font-weight:750;font-size:12px;letter-spacing:.02em}
+.re-action-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;color:#c6d4dd;font-size:13px}
+.re-action-meta span{background:rgba(255,255,255,.07);border-radius:9px;padding:6px 9px}
+.re-action-task{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px;border-top:1px solid rgba(255,255,255,.13);padding-top:14px;font-size:13px;color:#c7d3dd}
+.re-action-task strong{font-size:25px;font-weight:850;color:#fff;white-space:nowrap}
+.re-action-object{margin:10px 0 0;color:#d8e2eb;font-size:13px;line-height:1.45}
+.re-action-message{border:1px solid rgba(158,190,207,.2);border-radius:17px;background:rgba(255,255,255,.045);padding:15px 17px}
+.re-action-message p{font-size:14px;line-height:1.6;margin:9px 0 0;overflow-wrap:anywhere;white-space:pre-wrap;color:#eff5f9}
+.re-action-demo{margin:14px 0;padding:13px 16px;border-radius:14px;border:1px solid rgba(241,196,75,.34);background:rgba(241,196,75,.08)}
+.re-action-demo strong{font-size:13px;color:#ffdb85}
+.re-action-demo p{margin:5px 0 0;color:#ddd3bc;font-size:13px;line-height:1.5}
+.re-action-send{margin-top:15px}
+.re-action-send .re-contact-label{font-size:13px}
+.re-action-send .re-contact{margin-top:9px}
+.re-action-send .re-contact-row{margin-top:10px}
+@media(max-width:360px){.re-action-context{padding:14px}.re-action-task strong{font-size:22px}.re-action-identity strong{font-size:17px}}
