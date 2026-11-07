@@ -123,6 +123,45 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert(download.suggestedFilename().endsWith('.json'));
   assert.deepEqual(errors,[]);await context.close();
  });
+ await run('Devis prêt : PDF et envoi confirmé manuellement',async()=>{
+  const {page,context,errors}=await contextPage([sample('share1')],{mobile:true});
+  page.on('dialog',d=>d.accept());
+  await click(page,'#gains [data-open="share1"]');
+  await page.locator('.re-more summary').click();
+  await click(page,'#service [data-action="document"]');
+  const [pdf]=await Promise.all([page.waitForEvent('download'),click(page,'#service [data-action="download"]')]);
+  assert(pdf.suggestedFilename().endsWith('.pdf'));
+  await click(page,'#service [data-action="back"]');
+  const [shared]=await Promise.all([page.waitForEvent('download'),click(page,'#service [data-action="send"]')]);
+  assert(shared.suggestedFilename().endsWith('.pdf'));
+  await expectText(page,'.re-primary-next','Confirmer l’envoi');
+  await click(page,'#service [data-action="confirmSent"]');
+  await expectText(page,'.re-progress-current','Envoyé');
+  assert.deepEqual(errors,[]);await context.close();
+ });
+ await run('Réglages entreprise, mode démo et restauration',async()=>{
+  const {page,context,errors}=await contextPage([]);
+  page.on('dialog',d=>d.accept());
+  await click(page,'#appearance');
+  await click(page,'#service [data-action="company"]');
+  await page.locator('[data-field="c.name"]').fill('Nouvelle société de test');
+  await click(page,'#service [data-action="saveCompany"]');
+  const name=await page.evaluate(()=>JSON.parse(localStorage.getItem('re_v2_company')).name);
+  assert.equal(name,'Nouvelle société de test');
+  await page.locator('#restoreInput').setInputFiles({name:'restore.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'renov-express-v2-backup',version:1,devis:[sample('imported')],tarifs:[]}))});
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('re_v2_devis')).some(d=>d.id==='imported'));
+  assert.deepEqual(errors,[]);await context.close();
+ });
+ await run('Facture échue : priorité et couleur rouge',async()=>{
+  const invoice={num:'F2026-007',issuedAt:'2020-01-01T12:00:00Z',dueDate:'2020-02-01',totals:{ht:100,tva:20,ttc:120,acompte:36},issuer,client:sample('late').client,lines:sample('late').lines};
+  const {page,context,errors}=await contextPage([sample('late','invoiced',{invoice,payments:[]})],{mobile:true});
+  await expectText(page,'#hero','Enregistrer un règlement');
+  await click(page,'#gains [data-open="late"]');
+  await expectText(page,'.re-progress-current','Paiement en retard');
+  const color=await page.locator('.re-progress-current').evaluate(el=>getComputedStyle(el).color);
+  assert(/255, 159, 159/.test(color),'couleur d’alerte non appliquée : '+color);
+  assert.deepEqual(errors,[]);await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
