@@ -7,20 +7,28 @@
  const clone=x=>JSON.parse(JSON.stringify(x));
  const cents=n=>Math.round(Number(n)*100);
  const round=n=>Math.round(n*100)/100;
- function isValidIssuer(c){
-  return !!c && !!String(c.name||'').trim() && !!String(c.address||'').trim() &&
-   !!String(c.city||'').trim() && /^\d{14}$/.test(String(c.siret||'').replace(/\s/g,'')) &&
-   !/fictif|exemple/i.test([c.name,c.address,c.city,c.email,c.insurer].join(' '));
+ function issuerProblems(c){
+  if(!c)return ['coordonnées de l’entreprise'];
+  const problems=[];
+  for(const [field,label] of [['name','raison sociale'],['address','adresse'],['city','ville']]){
+   if(!String(c[field]||'').trim()||/fictif|exemple/i.test(String(c[field])))problems.push(label);
+  }
+  const siret=String(c.siret||'').replace(/\s/g,'');
+  if(!/^\d{14}$/.test(siret)||/^0{14}$/.test(siret))problems.push('SIRET réel (14 chiffres)');
+  if(/fictif|exemple/i.test(String(c.email||'')))problems.push('adresse e-mail professionnelle');
+  if(/fictif|exemple/i.test(String(c.insurer||'')))problems.push('nom de l’assureur');
+  return problems;
  }
- function nextNumber(list,year){
-  const yy=String(year);
+ function isValidIssuer(c){return issuerProblems(c).length===0;}
+ function nextNumber(list,year,demo=false){
+  const yy=String(year),prefix=demo?'DEMO-F':'F';
   const ids=list.map(d=>d.invoice&&d.invoice.num).filter(Boolean);
-  const n=ids.reduce((max,id)=>{const m=new RegExp('^F'+yy+'-(\\d+)$').exec(id);return m?Math.max(max,Number(m[1])):max;},0);
-  return 'F'+yy+'-'+String(n+1).padStart(3,'0');
+  const n=ids.reduce((max,id)=>{const m=new RegExp('^'+prefix+yy+'-(\\d+)$').exec(id);return m?Math.max(max,Number(m[1])):max;},0);
+  return prefix+yy+'-'+String(n+1).padStart(3,'0');
  }
  function issue(d,list,issuer,when=new Date()){
-  if(!isValidIssuer(issuer))throw Error('Coordonnées légales de l’entreprise incomplètes');
-  if(!d||d.demo)throw Error('La démonstration ne peut pas produire une facture réelle');
+  if(!d)throw Error('Devis introuvable');
+  if(!d.demo&&!isValidIssuer(issuer))throw Error('Informations professionnelles à compléter : '+issuerProblems(issuer).join(', '));
   if(d.invoice)throw Error('Une facture existe déjà pour ce devis');
   if(!['signed','deposit'].includes(d.status))throw Error('Un accord client est requis avant facturation');
   if(!d.client||!String(d.client.name||'').trim()||!Array.isArray(d.lines)||!d.lines.length)throw Error('Devis incomplet');
@@ -28,8 +36,18 @@
   const totals=Calc.totals(d),issuedAt=when.toISOString(),year=when.getFullYear();
   const due=new Date(when.getTime());due.setDate(due.getDate()+30);
   const doc=clone(d);
-  doc.invoice={num:nextNumber(list,year),issuedAt,dueDate:due.toISOString().slice(0,10),issuer:clone(issuer),client:clone(d.client),obj:d.obj,site:d.site,lines:clone(d.lines),tva:d.tva,quoteNumber:d.num,totals:clone(totals)};
+  doc.invoice={num:nextNumber(list,year,!!d.demo),issuedAt,dueDate:due.toISOString().slice(0,10),issuer:clone(issuer),client:clone(d.client),obj:d.obj,site:d.site,lines:clone(d.lines),tva:d.tva,quoteNumber:d.num,totals:clone(totals),demo:!!d.demo};
   doc.payments=Array.isArray(d.payments)?clone(d.payments):[];
+  // Acompte déjà confirmé : crédit enregistré une seule fois à l'émission.
+  if(d.status==='deposit'&&!doc.payments.some(p=>p.kind==='deposit')){
+   const expected=round(Math.max(0,Math.min(totals.ttc,totals.acompte)));
+   const remaining=round(Math.max(0,expected-paid(doc)));
+   if(remaining>0){
+    const sourceDate=d.depositAt||issuedAt;
+    const validDate=Number.isFinite(new Date(sourceDate).getTime())?new Date(sourceDate).toISOString().slice(0,10):issuedAt.slice(0,10);
+    doc.payments.push({amount:remaining,date:validDate,method:'Acompte encaissé',kind:'deposit',createdAt:issuedAt});
+   }
+  }
   doc.invoicedAt=issuedAt;
   doc.status='invoiced';
   return doc;
@@ -50,6 +68,7 @@
   if(!d||!d.invoice)throw Error('Facture introuvable');
   if(typeof jspdf==='undefined'||!jspdf.jsPDF)throw Error('Bibliothèque PDF indisponible');
   const i=d.invoice,c=i.issuer,t=i.totals,money=n=>Calc.money(n,' '),pdf=new jspdf.jsPDF({unit:'mm',format:'a4'});
+  if(i.demo){pdf.setTextColor(170,55,55);pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text('SIMULATION — DOCUMENT FICTIF, NON VALABLE',15,10);}
   const mm=180;let y=18;
   const text=(s,x,yy)=>pdf.text(String(s||''),x,yy);
   pdf.setTextColor(31,78,95);pdf.setFont('helvetica','bold');pdf.setFontSize(19);
@@ -76,7 +95,9 @@
   pdf.setFont('helvetica','bold');pdf.setFontSize(10);
   text('Total HT : '+money(t.ht),105,y);y+=6;
   text('TVA '+i.tva+' % : '+money(t.tva),105,y);y+=6;
-  text('TOTAL TTC : '+money(t.ttc),105,y);y+=10;
+  text('TOTAL TTC : '+money(t.ttc),105,y);y+=6;
+  if(paid(d)>0){text('Déjà encaissé : '+money(paid(d)),105,y);y+=6;text('RESTE À PAYER : '+money(balance(d)),105,y);y+=8;}
+  else y+=4;
   pdf.setFont('helvetica','normal');pdf.setFontSize(9);
   const terms=['Paiement : '+(c.payment||'Selon accord contractuel.'),'Échéance : '+frdate(i.dueDate+'T12:00:00')];
   terms.forEach(v=>{const lines=pdf.splitTextToSize(v,mm);if(y+lines.length*5>268){pdf.addPage();y=20;}pdf.text(lines,15,y);y+=lines.length*5+2;});
@@ -86,7 +107,7 @@
    text(c.name+' · SIRET '+c.siret,15,286);pdf.text('Facture '+i.num+' · '+page+'/'+count,195,286,{align:'right'});}
   return pdf;
  }
- const api={isValidIssuer,nextNumber,issue,paid,balance,addPayment,buildPDF};
+ const api={issuerProblems,isValidIssuer,nextNumber,issue,paid,balance,addPayment,buildPDF};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
  else root.InvoiceLogic=api;
 })(typeof window!=='undefined'?window:this);

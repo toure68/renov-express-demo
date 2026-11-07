@@ -10,7 +10,7 @@
   for(const d of obj.devis){
    if(!d||typeof d!=='object'||typeof d.id!=='string'||!d.id||ids.has(d.id)||!d.client||typeof d.client!=='object'||!Array.isArray(d.lines)||typeof d.status!=='string')throw Error('Un devis de la sauvegarde est invalide ou dupliqué');
    if(d.lines.length>2000)throw Error('Devis avec trop de prestations');
-   if(d.invoice){if(typeof d.invoice.num!=='string'||!/^F\d{4}-\d{3,}$/.test(d.invoice.num)||invoiceNumbers.has(d.invoice.num))throw Error('Numéro de facture invalide ou dupliqué dans la sauvegarde');invoiceNumbers.add(d.invoice.num);}
+   if(d.invoice){if(typeof d.invoice.num!=='string'||!/^(?:DEMO-)?F\d{4}-\d{3,}$/.test(d.invoice.num)||invoiceNumbers.has(d.invoice.num))throw Error('Numéro de facture invalide ou dupliqué dans la sauvegarde');invoiceNumbers.add(d.invoice.num);}
    ids.add(d.id);
   }
   for(const t of obj.tarifs){if(!t||typeof t.label!=='string'||typeof t.unit!=='string')throw Error('Un tarif est invalide');}
