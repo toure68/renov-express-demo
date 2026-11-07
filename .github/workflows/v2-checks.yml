@@ -29,3 +29,5 @@ jobs:
         run: node tests/test_calculs.js
       - name: Vérifier le workflow V2
         run: node tests/test_workflow_v2.js
+      - name: Vérifier les contrats UI CCTP
+        run: node tests/test_cctp_ui.js
