@@ -22,7 +22,7 @@ function demonstration(){
 let D=load(K.devis,null);if(!Array.isArray(D)){D=load(K.demo,'on')==='off'?[]:demonstration();store(K.devis,D);}
 const demoActive=()=>D.some(d=>d.demo);
 let tarifs=load(K.tarifs,null);if(!Array.isArray(tarifs)){tarifs=clone(DEFAULT_TARIFS);store(K.tarifs,tarifs);}
-let cur=null,saveTimer,EXPLORER=false,HEROD=null,toastTimer,focusBefore=null,routeKind='',routeId='',lastState='',scrollLast=false;
+let cur=null,saveTimer,EXPLORER=false,HEROD=null,toastTimer,focusBefore=null,routeKind='',routeId='',lastState='',scrollLast=false,GLOBAL_QUERY='';
 const prepared=new Map(),downloaded=new Set(),sheet=$('#sheet'),body=$('#service'),backdrop=$('#sbg');
 function toast(msg){const box=$('#island');box.innerHTML='<div class="mini" style="white-space:normal;padding:4px 7px">'+esc(msg)+'</div>';box.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('show'),3600);}
 function total(d){return Calc.money(Calc.totals(d).ttc);}
@@ -87,10 +87,11 @@ function rendreHero(){const h=$('#hero'),d=F.prioritaire(D);HEROD=d;
  h.innerHTML='<div class="hv-t"><span class="lbl">'+info.tag+'</span>'+demoBadge(d)+'</div><div class="hv-d">'+logo(d)+'<div class="hv-m"><b>'+esc(d.client.name||'Nouveau devis')+'</b><span>'+esc(info.txt)+'</span></div><div class="hv-v">'+total(d)+'</div></div>'+actionHTML(d,info.action,info.cta,'hv-go')+'<div class="hv-tot">'+esc(summary())+'</div>';
  preparePdf(d);
 }
-function rendreGains(){rendreHero();const list=D.filter(F.needsAttention).sort(F.ordre),visible=EXPLORER?list:list.slice(0,3),remaining=list.length-visible.length;
+function documentKindLabel(d){return F.documentKind(d)==='invoices'?'facture facturé':'devis';}
+function rendreGains(){rendreHero();const searching=GLOBAL_QUERY.trim().length>0;const list=(searching?D:D.filter(F.needsAttention)).filter(d=>!searching||norm([d.client.name,d.num,d.obj,d.client.email,d.client.tel,d.date,documentKindLabel(d)].join(' ')).includes(norm(GLOBAL_QUERY))).sort(F.ordre),visible=searching||EXPLORER?list:list.slice(0,3),remaining=list.length-visible.length;
  $('#exampleLabel').textContent=demoActive()?'exemples fictifs':'';
- $('#gains').innerHTML=visible.map(row).join('')+(list.length?'':'<p class="empty">Aucun devis à suivre pour le moment.</p>');
- $('#quoteExplorer').innerHTML=(remaining>0?'<button class="all explorer" data-action="explorer">Explorer · '+remaining+' autre'+(remaining>1?'s':'')+'</button>':EXPLORER&&list.length>3?'<button class="all explorer" data-action="explorer">Réduire</button>':'');
+ $('#gains').innerHTML=visible.map(row).join('')+(list.length?'':'<p class="empty">'+(searching?'Aucun dossier trouvé.':'Aucun devis à suivre pour le moment.')+'</p>');
+ $('#quoteExplorer').innerHTML=searching?'':(remaining>0?'<button class="all explorer" data-action="explorer">Explorer · '+remaining+' autre'+(remaining>1?'s':'')+'</button>':EXPLORER&&list.length>3?'<button class="all explorer" data-action="explorer">Réduire</button>':'');
  const quotes=F.historyDocuments(D,'quotes').length,invoices=F.historyDocuments(D,'invoices').length;
  $('#quotesCount').textContent=quotes+' devis';
  $('#invoicesCount').textContent=invoices+' document'+(invoices>1?'s':'')+' facturé'+(invoices>1?'s':'');
@@ -246,6 +247,7 @@ document.addEventListener('keydown',e=>{
  if(e.key==='Escape'&&sheet.classList.contains('open'))navigate(parentRoute());
  if(e.key==='Tab'&&sheet.classList.contains('open')){const all=[...sheet.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(x=>x.getClientRects().length),first=all[0],last=all[all.length-1];if(e.shiftKey&&el===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&el===last){e.preventDefault();first.focus();}}
 });
+const search=$('#globalSearch'),clearSearch=$('#clearGlobalSearch');if(search){search.addEventListener('input',()=>{GLOBAL_QUERY=search.value;clearSearch.hidden=!GLOBAL_QUERY;rendreGains();});if(clearSearch)clearSearch.onclick=()=>{search.value='';GLOBAL_QUERY='';clearSearch.hidden=true;rendreGains();search.focus();};}
 $('#appearance').onclick=()=>navigate('appearance');$('#newQuote').onclick=newQuote;$('#tarifs').onclick=()=>navigate('tarifs');$('#history').onclick=()=>navigate('history');backdrop.onclick=()=>navigate('');
 let grabY=null,grabDelta=0;$('#grab').addEventListener('pointerdown',e=>{grabY=e.clientY;grabDelta=0;$('#grab').setPointerCapture(e.pointerId);});$('#grab').addEventListener('pointermove',e=>{if(grabY!==null)grabDelta=e.clientY-grabY;});$('#grab').addEventListener('pointerup',()=>{if(grabY===null)return;grabY=null;if(grabDelta>80)navigate(parentRoute());else if(grabDelta<-40||Math.abs(grabDelta)<6){expandSheet();}});
 body.addEventListener('scroll',()=>{if(body.scrollTop>12){expandSheet();}});
