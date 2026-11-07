@@ -24,6 +24,7 @@ const demoActive=()=>D.some(d=>d.demo);
 const companyFields=['name','activity','address','city','phone','email','siret','tvaIntra','rcs','insurer','insurerPolicy','insurerZone','mediator','payment','validityDays','depositRate'];
 const companySaved=load('re_v2_company',null);if(companySaved&&typeof companySaved==='object')companyFields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(companySaved,k))COMPANY[k]=companySaved[k];});
 let tarifs=load(K.tarifs,null);if(!Array.isArray(tarifs)){tarifs=clone(DEFAULT_TARIFS);store(K.tarifs,tarifs);}
+let pendingInvoiceId=null;
 let cur=null,saveTimer,EXPLORER=false,HEROD=null,toastTimer,focusBefore=null,routeKind='',routeId='',lastState='',scrollLast=false,GLOBAL_QUERY='',GLOBAL_STATUS='all';
 const prepared=new Map(),downloaded=new Set(),sheet=$('#sheet'),body=$('#service'),backdrop=$('#sbg');
 function toast(msg){const box=$('#island');box.innerHTML='<div class="mini" style="white-space:normal;padding:4px 7px">'+esc(msg)+'</div>';box.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.remove('show'),3600);}
@@ -118,7 +119,7 @@ function contactView(d){
 function dossier(d){
  const p=currentAction(d),t=Calc.totals(d);
  const detail='<details class="re-more"><summary>Informations et historique</summary><div class="re-extra"><div class="opt"><span>Devis</span><b>'+esc(d.num)+'</b></div><div class="opt"><span>Date</span><b>'+displayDate(d.date)+'</b></div>'+(d.sentAt?'<p class="fine">Envoi déclaré : '+displayTime(d.sentAt)+'</p>':'')+(d.signedAt?'<p class="fine">'+(d.signature?'Signature recueillie':'Accord manuel')+' : '+displayTime(d.signedAt)+'</p>':'')+(d.invoice?'<p class="fine">Facture '+esc(d.invoice.num)+' · '+displayDate(d.invoice.issuedAt)+'</p>':'')+secondaryButton('document',d.id,'Consulter le devis','eye')+secondaryButton('options',d.id,'Options du dossier','more')+'</div></details>';
- return head(d.client.name||'Nouveau devis',d.obj,d)+frise(d)+demoBadge(d)+'<div class="card re-summary"><div class="re-summary-label">'+esc(d.obj||'Travaux à préciser')+'</div><strong class="re-summary-total">'+total(d)+'</strong><p class="re-summary-hint">'+(p.real==='draft'?'Complétez les informations pour préparer le devis.':p.real==='ready'?'Le devis est prêt à partager.':p.real==='late'?'Une relance est nécessaire.':p.real==='sent'?'Le devis a été déclaré envoyé.':p.real==='signed'?'Demandez l’acompte convenu.':p.real==='deposit'?'Vous pouvez préparer la facture.':F.invoiceOverdue(d)?'La facture a dépassé son échéance. Enregistrez le paiement seulement après sa réception.':d.invoice?'Facture '+esc(d.invoice.num)+' émise.':'Dossier classé.')+'</p>'+(d.invoice?'<div class="opt"><span>Encaissé</span><b>'+Calc.money(InvoiceLogic.paid(d))+'</b></div><div class="opt"><span>Reste dû</span><b>'+Calc.money(InvoiceLogic.balance(d))+'</b></div>':'')+'</div>'+contextButtons(d)+detail;
+ return head(d.client.name||'Nouveau devis',d.obj,d)+frise(d)+demoBadge(d)+'<div class="card re-summary"><div class="re-summary-label">'+esc(d.obj||'Travaux à préciser')+'</div><strong class="re-summary-total">'+total(d)+'</strong><p class="re-summary-hint">'+(p.real==='draft'?'Complétez les informations pour préparer le devis.':p.real==='ready'?'Le devis est prêt à partager.':p.real==='late'?'Une relance est nécessaire.':p.real==='sent'?'Le devis a été déclaré envoyé.':p.real==='signed'?'Demandez l’acompte convenu.':p.real==='deposit'?'Vous pouvez préparer la facture.':F.invoiceOverdue(d)?'La facture a dépassé son échéance. Enregistrez le paiement seulement après sa réception.':d.invoice?'Facture '+esc(d.invoice.num)+' émise.':'Dossier classé.')+'</p>'+(d.invoice?'<div class="opt"><span>Encaissé'+(d.payments&&d.payments.some(p=>p.kind==='deposit')?' (acompte inclus)':'')+'</span><b>'+Calc.money(InvoiceLogic.paid(d))+'</b></div><div class="opt"><span>Reste dû</span><b>'+Calc.money(InvoiceLogic.balance(d))+'</b></div>':'')+'</div>'+contextButtons(d)+detail;
 }
 
 function documentView(d){const t=Calc.totals(d);return head(d.num,d.invoice?'Devis lié à la facture '+d.invoice.num:'Devis de peinture',d)+demoBadge(d)+'<div class="card"><span class="tag">Client</span><h3>'+esc(d.client.name)+'</h3><p>'+esc(d.client.addr)+'<br>'+esc(d.client.email)+(d.client.tel?'<br>'+esc(d.client.tel):'')+'</p></div><div class="card"><span class="tag">Chantier</span><h3>'+esc(d.obj||'Travaux de peinture')+'</h3><p>'+esc(d.site||d.client.addr)+'</p></div><div class="card"><span class="tag">Prestations</span>'+d.lines.map(l=>'<div class="opt"><span>'+esc(l.label)+'<small>'+esc(Calc.qty(l.qty))+' '+esc(l.unit)+' × '+Calc.money(l.price)+' HT</small></span><b>'+Calc.money(Calc.lineTotalCents(l)/100)+'</b></div>').join('')+'</div><div class="card">'+[['Total HT',t.ht],['TVA '+d.tva+' %',t.tva],['Total TTC',t.ttc],['Acompte 30 %',t.acompte]].map(x=>'<div class="opt'+(x[0]==='Total TTC'?' re-total-ttc':'')+'"><span>'+x[0]+'</span><b>'+Calc.money(x[1])+'</b></div>').join('')+'</div>'+(d.signature?'<div class="card"><span class="tag">Bon pour accord</span><p>Signé le '+displayTime(d.signature.signedAt)+'</p><img class="re-signature" src="'+d.signature.data+'" alt="Signature du client"></div>':'')+'<details class="lettre"><summary>Mentions et rétractation</summary><div>Le PDF reprend les mentions de la V1, les conditions de paiement, la validité de '+COMPANY.validityDays+' jours, l’assurance décennale, le médiateur et le formulaire de rétractation. Les coordonnées d’entreprise sont fictives dans cette démonstration.</div></details><div class="actbar">'+primaryButton('download',d.id,'Télécharger le PDF','download')+'</div>';}
@@ -143,7 +144,7 @@ function statusView(d){
 function backupData(){const payload={format:'renov-express-v2-backup',version:1,exportedAt:new Date().toISOString(),devis:D,tarifs,company:clone(COMPANY)};try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RenovExpress_sauvegarde_'+localISO(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast('Sauvegarde téléchargée. Conservez-la dans un emplacement privé.');}catch(e){toast('Impossible de créer la sauvegarde.');}}
 function companyView(){
  const labels={name:'Raison sociale',activity:'Activité',address:'Adresse',city:'Code postal et ville',phone:'Téléphone',email:'Email professionnel',siret:'SIRET (14 chiffres)',tvaIntra:'TVA intracommunautaire',rcs:'RCS / capital',insurer:'Assureur',insurerPolicy:'Numéro de police',insurerZone:'Zone de couverture',mediator:'Médiateur consommation',payment:'Conditions de paiement'};
- return head('Mon entreprise','Coordonnées utilisées dans les PDF')+'<div class="card"><p>Vérifiez les informations légales avant d’émettre un document réel. Les données d’origine sont fictives.</p>'+Object.keys(labels).map(k=>field(labels[k],'c.'+k,COMPANY[k]||'',k==='email'?'email':'text',k==='payment')).join('')+'</div><div class="actbar">'+primaryButton('saveCompany','','Enregistrer mon entreprise','save')+'</div>';
+ return head('Mon entreprise','Coordonnées utilisées dans les PDF')+'<div class="card"><p>'+(pendingInvoiceId?'Complétez les champs indiqués pour revenir au devis et émettre sa facture. ':'')+'Vérifiez les informations légales avant d’émettre un document réel.</p>'+(pendingInvoiceId?'<p class="re-error">Champs à corriger : '+esc(InvoiceLogic.issuerProblems(COMPANY).join(', '))+'</p>':'')+Object.keys(labels).map(k=>field(labels[k],'c.'+k,COMPANY[k]||'',k==='email'?'email':'text',k==='payment')).join('')+'</div><div class="actbar">'+primaryButton('saveCompany','','Enregistrer mon entreprise','save')+'</div>';
 }
 function saveCompany(){
  const next=clone(COMPANY),keys=companyFields.filter(k=>!['validityDays','depositRate'].includes(k));
@@ -151,7 +152,7 @@ function saveCompany(){
  if(next.email&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(next.email))return toast('Adresse email professionnelle invalide');
  // Profil enregistrable progressivement. Facturation bloquée tant que le SIRET n'est pas réel et valide.
  if(!store('re_v2_company',next))return;
- Object.assign(COMPANY,next);prepared.clear();toast('Entreprise enregistrée · les futurs PDF sont actualisés');navigate('appearance');
+ Object.assign(COMPANY,next);prepared.clear();const pending=find(pendingInvoiceId);if(pending){if(!InvoiceLogic.isValidIssuer(COMPANY)){route();toast('Vérifiez les champs signalés avant de créer la facture.');return;}pendingInvoiceId=null;navigate('d/'+pending.id);toast('Entreprise enregistrée. Le devis est prêt à être facturé.');return;}toast('Entreprise enregistrée · les futurs PDF sont actualisés');navigate('appearance');
 }
 function restoreData(file){
  if(!file)return;
@@ -172,11 +173,23 @@ function restoreData(file){
  }).catch(e=>toast('Import impossible : '+e.message));
 }
 function issueInvoice(d){
- if(!AppConfig.features.invoicing)return false;
- if(!InvoiceLogic.isValidIssuer(COMPANY)){toast('Renseignez d’abord les coordonnées réelles et le SIRET de votre entreprise.');navigate('company');return false;}
- if(!confirm('Créer une facture numérotée et verrouiller ce devis ? Vérifiez les mentions légales et le montant avant de continuer.'))return false;
- try{const next=InvoiceLogic.issue(d,D,COMPANY);if(!saveQuote(next))return false;navigate('d/'+d.id);rendreGains();toast('Facture '+next.invoice.num+' créée sur cet appareil');return true;}
- catch(e){toast(e.message);return false;}
+ if(!AppConfig.features.invoicing||!d)return false;
+ if(d.invoice){navigate('d/'+d.id);toast('Une facture existe déjà pour ce devis.');return false;}
+ if(!d.demo&&!InvoiceLogic.isValidIssuer(COMPANY)){
+  pendingInvoiceId=d.id;
+  navigate('company');
+  toast('Complétez les informations professionnelles indiquées pour facturer.');
+  return false;
+ }
+ const message=d.demo?'Créer une facture de SIMULATION pour ce devis fictif ? Elle sera marquée non valable.':'Créer une facture numérotée avec l’acompte déjà reçu déduit du solde ? Les données du devis seront verrouillées.';
+ if(!confirm(message))return false;
+ try{
+  const next=InvoiceLogic.issue(d,D,COMPANY);
+  if(!saveQuote(next)){toast('La facture n’a pas pu être enregistrée. Vérifiez l’espace disponible.');return false;}
+  pendingInvoiceId=null;navigate('d/'+d.id);rendreGains();
+  toast((d.demo?'Simulation ':'Facture ')+next.invoice.num+' créée · Reste dû : '+Calc.money(InvoiceLogic.balance(next)));
+  return true;
+ }catch(e){toast(e.message);return false;}
 }
 function invoiceSummary(d){
  if(!d.invoice)return '';
