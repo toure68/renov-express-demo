@@ -5,7 +5,7 @@ const RANG={late:0,ready:1,draft:2,signed:3,sent:4,deposit:5,invoiced:6};
 const ETAPES=[['draft','Brouillon'],['ready','Prêt'],['sent','Envoyé'],['signed','Signé'],['deposit','Acompte reçu'],['invoiced','Facturé']];
 function missing(d){
  const m=[];if(!(d.client.name||'').trim())m.push('nom du client');
- if(!(d.client.email||'').trim())m.push('email du client');else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.client.email.trim()))m.push('email du client valide');
+ if((d.client.email||'').trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.client.email.trim()))m.push('email du client valide');
  if(!d.lines.length)m.push('prestation');
  d.lines.forEach((l,i)=>{if(!(l.label||'').trim())m.push('désignation de la ligne '+(i+1));if(Calc.parseNum(l.price)===null||Calc.parseNum(l.price)<0)m.push('prix de la ligne '+(i+1));if(!(Calc.parseNum(l.qty)>0))m.push('quantité de la ligne '+(i+1));});
  return m;
