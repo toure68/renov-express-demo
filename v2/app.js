@@ -80,12 +80,12 @@ function depositMessage(d){const c=d.client,who=c.title&&c.lastName?c.title+' '+
 function addressForEmail(d,kind,msg){const subject=(kind==='relance'?'Votre devis '+d.num:'Acompte · devis '+d.num)+' · '+COMPANY.name,to=(d.client.email||'').trim();return'mailto:'+(/^[^\s@?&]+@[^\s@?&]+$/.test(to)?to:'')+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(msg+'\n\n'+COMPANY.name);}
 function contactButtons(d,kind,text,extra=''){
  const msg=kind==='relance'?F.relanceMessage(d):depositMessage(d);
- if(d.demo)return'<div class="re-contact '+extra+'"><p class="re-contact-label">Démonstration fictive : aucun message réel ne sera envoyé.</p></div>';
- const raw=(d.client.tel||'').replace(/[\\s().-]/g,''),tel=/^0[1-9]\\d{8}$/.test(raw)?'+33'+raw.slice(1):raw;
- const whatsapp=/^\\+\\d{8,15}$/.test(tel)?'<a class="re-wa" data-contact="whatsapp" href="https://wa.me/'+tel.slice(1)+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener noreferrer" aria-label="'+esc(text)+' par WhatsApp">'+bi('wa')+'<span>WhatsApp</span></a>':'';
- const email=(d.client.email||'').trim(),mail=/^[^\\s@?&]+@[^\\s@?&]+\\.[^\\s@?&]+$/.test(email)?'<a class="re-mail" data-contact="email" href="'+esc(addressForEmail(d,kind,msg))+'" aria-label="'+esc(text)+' par email">'+bi('mail')+'<span>Email</span></a>':'';
- if(!whatsapp&&!mail)return'<div class="re-contact '+extra+'"><p class="re-contact-label">Ajoutez un numéro de téléphone ou un e-mail pour contacter le client.</p>'+secondaryButton('edit',d.id,'Renseigner les coordonnées','pen')+'</div>';
- return'<div class="re-contact '+extra+'"><p class="re-contact-label">'+esc(text)+' par :</p><div class="re-contact-row">'+whatsapp+mail+'</div><p class="fine">L’envoi reste à confirmer dans votre messagerie.</p></div>';
+ if(d.demo)return'<div class="re-contact '+extra+'"><p class="re-contact-label">Exemple fictif : aucun message réel ne peut être envoyé.</p></div>';
+ const raw=String(d.client.tel||'').replace(/[\s().-]/g,''),tel=/^0[1-9]\d{8}$/.test(raw)?'+33'+raw.slice(1):raw;
+ const whatsapp=/^\+\d{8,15}$/.test(tel)?'<a class="re-wa" data-contact="whatsapp" href="https://wa.me/'+tel.slice(1)+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener noreferrer" aria-label="'+esc(text)+' par WhatsApp">'+bi('wa')+'<span>WhatsApp</span></a>':'';
+ const email=(d.client.email||'').trim(),mail=/^[^\s@?&]+@[^\s@?&]+\.[^\s@?&]+$/.test(email)?'<a class="re-mail" data-contact="email" href="'+esc(addressForEmail(d,kind,msg))+'" aria-label="'+esc(text)+' par email">'+bi('mail')+'<span>Email</span></a>':'';
+ if(!whatsapp&&!mail)return'<div class="re-contact '+extra+'"><p class="re-contact-label">Aucune coordonnée utilisable. Complétez le client pour le contacter.</p>'+primaryButton('edit',d.id,'Ajouter les coordonnées','pen')+'</div>';
+ return'<div class="re-contact '+extra+'"><p class="re-contact-label">'+esc(text)+' via :</p><div class="re-contact-row '+(!whatsapp||!mail?'re-one-channel':'')+'">'+whatsapp+mail+'</div><p class="fine">Le message doit être envoyé par vous dans l’application choisie.</p></div>';
 }
 const ACTION_ICON={send:'send',edit:'pen',sign:'sign',invoiced:'euro',document:'eye',contact:'send',confirmSent:'check',issueInvoice:'euro',payment:'euro',downloadInvoice:'download'};
 function actionHTML(d,action,text,extra=''){const next=action==='relance'||action==='deposit'?'contact':action;return primaryButton(next,d.id,esc(text),ACTION_ICON[next]||'check').replace('class="cta"','class="cta '+extra+'"');}
