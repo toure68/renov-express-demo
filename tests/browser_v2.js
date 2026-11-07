@@ -220,12 +220,14 @@ async function expectText(page,selector,text){await page.locator(selector).filte
     const available=(window.visualViewport?.height||innerHeight)-Math.min(56,Math.max(22,Math.round((window.visualViewport?.height||innerHeight)*.08)));
     const overflow=content.scrollHeight>content.clientHeight+7;
     const buttons=[...content.querySelectorAll('.cta,.chx,.all,.back')].filter(b=>{
+      // Un bouton dans un <details> fermé est volontairement secondaire :
+      // son rectangle DOM ne signifie pas qu'il soit réellement affiché.
+      if(b.closest('details:not([open])')&&!b.closest('summary'))return false;
       const cs=getComputedStyle(b),rect=b.getBoundingClientRect();
       return cs.display!=='none'&&cs.visibility!=='hidden'&&rect.width>0&&rect.height>0;
     }).map(b=>{const box=b.getBoundingClientRect(),style=getComputedStyle(b);return {text:(b.innerText||b.getAttribute('aria-label')||'').slice(0,50),height:box.height,bottom:box.bottom,top:box.top,radius:parseFloat(style.borderTopLeftRadius)};});
     return {panelHeight:r.height,panelTop:r.top,panelBottom:r.bottom,available,overflow,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight,buttons};
    });
-   if(route==='d/geometry-ready'){console.log('DIMENSIONS FICHE',JSON.stringify(m));await page.screenshot({path:'tests/screenshots/00-diagnostic-fenetre.png'});}
    assert(m.panelHeight<=m.available+4,route+': fenêtre hors de l’écran : '+JSON.stringify(m));
    assert(!m.overflow||m.panelHeight>=m.available*.91,route+': fenêtre petite malgré du contenu caché : '+JSON.stringify(m));
    for(const b of m.buttons){
