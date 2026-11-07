@@ -20,3 +20,75 @@
 .h2d-heading h2{margin:0;line-height:1.3;font-size:clamp(14px,3.6vw,17px)}
 .h2d-heading .ex{font-size:10.5px;line-height:1.25;margin:0}
 .h2d-heading .ex:empty{display:none}
+
+/* Accueil terrain — rythme visuel lisible et respiration entre les sections.
+   Les espacements s'appliquent uniquement à l'accueil, jamais aux fenêtres.
+   Les actions restent regroupées, sans créer de menus supplémentaires. */
+.phone > .global-search{margin-top:20px}
+.phone > .actions{
+  gap:16px;
+  margin-top:22px;
+  margin-bottom:0;
+}
+.phone > .actions .act{
+  height:auto;
+  min-height:122px;
+  padding:16px 10px 15px;
+  gap:12px;
+  border-radius:22px;
+}
+/* Un espace volontaire entre la fin des deux grandes cartes et le titre. */
+.phone > .h2d{
+  margin-top:30px;
+  margin-bottom:15px;
+  min-height:24px;
+  align-items:center;
+}
+.phone > .h2d h2{
+  margin:0;
+  line-height:1.35;
+  letter-spacing:-.015em;
+}
+.phone > .h2d .ex{line-height:1.35}
+.phone > #gains{
+  gap:13px;
+  margin-top:0;
+}
+.phone > #gains .row{
+  min-height:72px;
+  padding:13px 14px;
+}
+.phone > #quoteExplorer{margin-top:17px}
+.phone > #quoteExplorer:empty{display:none}
+.phone > #quoteExplorer .explorer{
+  margin:0;
+  min-height:48px;
+  height:auto;
+  border-radius:17px;
+}
+.phone > #documents{
+  gap:14px;
+  margin-top:0;
+}
+.phone > #quoteExplorer + h2{
+  margin-top:35px;
+  margin-bottom:15px;
+  line-height:1.35;
+  letter-spacing:-.01em;
+}
+.phone > #documents .svc{
+  min-height:73px;
+  padding:12px 13px;
+  border-radius:20px;
+}
+@media(max-width:359px){
+  .phone > .actions{gap:12px;margin-top:19px}
+  .phone > .actions .act{min-height:114px;padding:14px 8px}
+  .phone > .h2d{margin-top:26px;margin-bottom:13px}
+  .phone > #gains{gap:11px}
+  .phone > #quoteExplorer + h2{margin-top:30px}
+  .phone > #documents{gap:11px}
+}
+@media(prefers-reduced-motion:reduce){
+  .phone > .actions .act{transition:none}
+}
