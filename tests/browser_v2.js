@@ -312,6 +312,40 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert.deepEqual(errors,[]);
   await context.close();
  });
+ await run('Vidéo iPhone : bouton Relancer révèle tout le contexte du dossier fictif',async()=>{
+  const q=sample('video-relance','sent',{sentAt:'2026-10-31T10:00:00Z',demo:true,num:'D2026-042',client:{name:'Claire Dubois',email:'',tel:''},obj:'Rénovation séjour et chambre'});
+  const {page,context,errors}=await contextPage([q],{mobile:true});
+  await page.goto(host+'/#',{waitUntil:'load'});
+  await click(page,'#hero.vedette [data-action="contact"]');
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  for(const str of ['Claire Dubois','D2026-042','Rénovation séjour et chambre','Message de relance préparé','Simulation uniquement']){
+   await expectText(page,'#service',str);
+  }
+  assert.equal(await page.locator('#service .re-action-task strong').isVisible(),true);
+  assert.equal(await page.locator('#service .re-action-message p').isVisible(),true);
+  assert.equal(await page.locator('#service .re-wa, #service .re-mail').count(),0,'Ne jamais envoyer à un faux client');
+  assert.equal(await page.locator('#service .re-more').count(),0,'Aucune information de relance importante ne doit rester repliée');
+  await page.screenshot({path:'tests/screenshots/09-relance-informations-visibles.png'});
+  await click(page,'#service [data-action="viewDossier"]');
+  await expectText(page,'.re-progress-current','À relancer');
+  assert.deepEqual(errors,[]);await context.close();
+ });
+ await run('Action Relancer réelle : infos client, motif et WhatsApp/email immédiatement visibles',async()=>{
+  const q=sample('real-relance','sent',{sentAt:'2026-10-31T10:00:00Z',demo:false,num:'D2026-099',client:{name:'Monsieur Martin',email:'martin@example.com',tel:'0612345678'},obj:'Peinture bureaux'});
+  const {page,context,errors}=await contextPage([q],{mobile:true});
+  await click(page,'#hero.vedette [data-action="contact"]');
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  for(const str of ['Monsieur Martin','D2026-099','Peinture bureaux','Message de relance préparé','Choisir le canal d’envoi']){
+   await expectText(page,'#service',str);
+  }
+  assert.equal(await page.locator('#service .re-wa').isVisible(),true);
+  assert.equal(await page.locator('#service .re-mail').isVisible(),true);
+  assert.equal(await page.locator('#service .re-more').count(),0,'Aucun historique caché dans la relance');
+  await page.screenshot({path:'tests/screenshots/10-relance-canaux-visibles.png'});
+  await click(page,'#service [data-action="back"]');
+  await expectText(page,'.re-progress-current','À relancer');
+  assert.deepEqual(errors,[]);await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
