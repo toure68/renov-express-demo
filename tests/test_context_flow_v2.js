@@ -18,6 +18,14 @@ assert.equal(action(d,{invoicing:false}).action,'document');
 d.status='invoiced';d.invoice={num:'F2026-901'};assert.equal(action(d,{balance:120}).action,'payment');
 assert.equal(action(d,{balance:0}).action,'downloadInvoice');
 delete d.invoice;assert.equal(action(d).legacy,true);assert.equal(action(d).action,'document');
+const invoice={...base(),id:'invoice-overdue',status:'invoiced',invoice:{num:'F2026-001',dueDate:'2020-01-01',totals:{ttc:120}},payments:[]};
+assert.equal(Flow.invoiceOverdue(invoice),true);
+assert.equal(action(invoice,{balance:120}).label,'Paiement en retard');
+assert.equal(action(invoice,{balance:120}).action,'payment');
+assert.equal(Flow.prioritaire([base(),invoice]).id,invoice.id);
+assert.equal(Flow.needsAttention(invoice),true);
+assert.equal(Flow.documentKind({...base(),status:'invoiced'}),'quotes','Un ancien statut facturé sans PDF ne doit pas créer une vraie facture');
+
 assert.equal(Context.STAGES.length,6);
 for(const state of ['draft','ready','sent','signed','deposit','invoiced']) {
  const b=Context.STAGES.indexOf(state);
