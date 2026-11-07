@@ -225,6 +225,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
     }).map(b=>{const box=b.getBoundingClientRect(),style=getComputedStyle(b);return {text:(b.innerText||b.getAttribute('aria-label')||'').slice(0,50),height:box.height,bottom:box.bottom,top:box.top,radius:parseFloat(style.borderTopLeftRadius)};});
     return {panelHeight:r.height,panelTop:r.top,panelBottom:r.bottom,available,overflow,scrollHeight:content.scrollHeight,clientHeight:content.clientHeight,buttons};
    });
+   if(route==='d/geometry-ready'){console.log('DIMENSIONS FICHE',JSON.stringify(m));await page.screenshot({path:'tests/screenshots/00-diagnostic-fenetre.png'});}
    assert(m.panelHeight<=m.available+4,route+': fenêtre hors de l’écran : '+JSON.stringify(m));
    assert(!m.overflow||m.panelHeight>=m.available*.91,route+': fenêtre petite malgré du contenu caché : '+JSON.stringify(m));
    for(const b of m.buttons){
