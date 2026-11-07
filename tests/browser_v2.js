@@ -180,6 +180,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert.equal(await page.locator('#gains [data-open="draft-filter"]').count(),1);
   await page.locator('#homeStatusFilter').selectOption('all');
   await click(page,'#quotesArchive');
+  await page.locator('#historyRows [data-open]').first().waitFor();
   assert.equal(await page.locator('#historyRows [data-open]').count(),2);
   assert.deepEqual(errors,[]);await context.close();
  });
@@ -197,6 +198,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await page.goto(host+'/#d/contact-1');
   await expectText(page,'.re-primary-next','Demander l’acompte');
   await click(page,'#service [data-action="contact"]');
+  await page.locator('#service [data-contact="whatsapp"]').waitFor();
   assert.equal(await page.locator('#service [data-contact="whatsapp"]').count(),1);
   assert.equal(await page.locator('#service [data-contact="email"]').count(),1);
   assert.deepEqual(errors,[]);await context.close();
