@@ -60,5 +60,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: recette-navigateur-v2
-          path: tests/browser-results.json
+          path: |
+            tests/browser-results.json
+            tests/screenshots/*.png
           if-no-files-found: ignore
