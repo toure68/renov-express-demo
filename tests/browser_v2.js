@@ -169,6 +169,38 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert(/255, 159, 159/.test(color),'couleur d’alerte non appliquée : '+color);
   assert.deepEqual(errors,[]);await context.close();
  });
+ await run('Filtres de statuts et archives des documents',async()=>{
+  const draft=sample('draft-filter','draft',{lines:[]});
+  const ready=sample('ready-filter','draft');
+  const {page,context,errors}=await contextPage([draft,ready]);
+  await page.locator('#homeStatusFilter').selectOption('ready');
+  assert.equal(await page.locator('#gains [data-open]').count(),1);
+  assert.equal(await page.locator('#gains [data-open="ready-filter"]').count(),1);
+  await page.locator('#homeStatusFilter').selectOption('draft');
+  assert.equal(await page.locator('#gains [data-open="draft-filter"]').count(),1);
+  await page.locator('#homeStatusFilter').selectOption('all');
+  await click(page,'#quotesArchive');
+  assert.equal(await page.locator('#historyRows [data-open]').count(),2);
+  assert.deepEqual(errors,[]);await context.close();
+ });
+ await run('Contact client et suivi manuel sans boutons superflus',async()=>{
+  const docs=[sample('manual-1'),sample('contact-1','signed',{signedAt:new Date().toISOString()})];
+  const {page,context,errors}=await contextPage(docs,{mobile:true});
+  page.on('dialog',d=>d.accept());
+  await click(page,'#gains [data-open="manual-1"]');
+  await page.locator('#service .re-more summary').click();
+  await click(page,'#service [data-action="options"]');
+  await page.locator('#service .re-more summary').click();
+  await click(page,'#service [data-action="status"]');
+  await click(page,'#service [data-action="manual-sent"]');
+  await expectText(page,'.re-progress-current','Envoyé');
+  await page.goto(host+'/#d/contact-1');
+  await expectText(page,'.re-primary-next','Demander l’acompte');
+  await click(page,'#service [data-action="contact"]');
+  assert.equal(await page.locator('#service [data-contact="whatsapp"]').count(),1);
+  assert.equal(await page.locator('#service [data-contact="email"]').count(),1);
+  assert.deepEqual(errors,[]);await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
