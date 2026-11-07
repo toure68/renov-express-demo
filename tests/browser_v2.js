@@ -12,6 +12,7 @@ const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; c
 const host='http://127.0.0.1:8765';
 let server,browser;
 const results=[];
+fs.mkdirSync(path.resolve(__dirname,'screenshots'),{recursive:true});
 function sample(id,status='draft',extras={}){
  return {id,num:'D2026-100',date:'2026-11-07',status,createdAt:'2026-11-07T08:00:00Z',updated:Date.now(),client:{name:'Client test',addr:'Paris',email:'client@test.fr',tel:'0612345678'},obj:'Peinture séjour',site:'Paris',lines:[{label:'Peinture murs',qty:2,price:50,unit:'m²'}],tva:20,demo:false,...extras};
 }
@@ -48,6 +49,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
  await run('Accueil ordinateur, recherche et navigation',async()=>{
   const {page,context,errors}=await contextPage([sample('ready1')]);
   await page.locator('#globalSearch').waitFor();
+  await page.screenshot({path:'tests/screenshots/01-accueil.png'});
   assert.equal(await page.locator('#newQuote').isVisible(),true);
   assert.equal(await page.locator('#invoicesArchive').isVisible(),true);
   await page.locator('#globalSearch').fill('Client test');
@@ -58,6 +60,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await click(page,'#gains [data-open="ready1"]');
   await expectText(page,'.re-progress-current','Prêt');
   await expectText(page,'.re-primary-next','Envoyer le devis');
+  await page.screenshot({path:'tests/screenshots/02-devis-pret.png'});
   assert.equal(await page.locator('.re-progress-current').count(),1);
   assert.deepEqual(errors,[]);await context.close();
  });
@@ -89,6 +92,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await page.locator('#signConsent').check();
   await click(page,'[data-action="confirmSignature"]');
   await expectText(page,'.re-progress-current','Signé');
+  await page.screenshot({path:'tests/screenshots/03-signature.png'});
   assert.deepEqual(errors,[]);await context.close();
  });
  await run('Acompte reçu → facture PDF → règlement',async()=>{
@@ -99,6 +103,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await click(page,'#service [data-action="issueInvoice"]');
   await expectText(page,'.re-progress-current','Facturé');
   await expectText(page,'.re-summary','84,00');
+  await page.screenshot({path:'tests/screenshots/04-acompte-facture.png'});
   await page.locator('#service .re-more summary').first().click();
   const [download]=await Promise.all([page.waitForEvent('download'),click(page,'#service [data-action="downloadInvoice"]')]);
   assert(download.suggestedFilename().startsWith('Facture_F20'));
@@ -159,6 +164,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await expectText(page,'#hero','Enregistrer un règlement');
   await click(page,'#gains [data-open="late"]');
   await expectText(page,'.re-progress-current','Paiement en retard');
+  await page.screenshot({path:'tests/screenshots/05-facture-en-retard.png'});
   const color=await page.locator('.re-progress-current').evaluate(el=>getComputedStyle(el).color);
   assert(/255, 159, 159/.test(color),'couleur d’alerte non appliquée : '+color);
   assert.deepEqual(errors,[]);await context.close();
