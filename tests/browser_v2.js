@@ -37,6 +37,7 @@ async function run(name,fn){
 async function click(page,selector){await page.locator(selector).first().click();}
 async function expectText(page,selector,text){await page.locator(selector).filter({hasText:text}).first().waitFor({timeout:7000});}
 (async()=>{
+ try{
  server=http.createServer((req,res)=>{
   const u=new URL(req.url,host);const relative=decodeURIComponent(u.pathname)==='/'?'index.html':decodeURIComponent(u.pathname).replace(/^\/+/,''),file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)&&file!==path.join(root,'index.html')){res.writeHead(403);return res.end();}
