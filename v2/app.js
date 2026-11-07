@@ -113,7 +113,25 @@ function contextButtons(d){
 function contactView(d){
  const stage=F.etatDossier(d),kind=stage==='signed'?'deposit':'relance';
  const title=kind==='deposit'?'Demander l’acompte':'Relancer le client';
- return head(title,d.num,d)+'<div class="card"><p>'+esc(kind==='deposit'?'Choisissez le canal pour demander l’acompte.':'Choisissez le canal pour relancer ce devis.')+'</p>'+contactButtons(d,kind,title)+'</div>'+(kind==='deposit'?'<details class="re-more"><summary>Acompte déjà reçu ?</summary><p>Enregistrez cet état uniquement après avoir vérifié le règlement.</p>'+secondaryButton('recordDeposit',d.id,'Confirmer l’acompte reçu','check')+'</details>':'')+'<p class="fine">L’ouverture de WhatsApp ou de l’e-mail ne confirme pas la réception par le client.</p>';
+ const due=kind==='relance'&&d.sentAt?Math.max(0,F.days(d)) :0;
+ const msg=kind==='deposit'?depositMessage(d):F.relanceMessage(d);
+ const number=esc(d.num||'—'),client=esc(d.client.name||'Client à compléter');
+ const motive=kind==='relance'?(due?'Envoyé il y a '+due+' jour'+(due>1?'s':''):'Relance du devis en attente'):'Devis signé · demande de règlement';
+ const amount=kind==='deposit'?Calc.money(Calc.totals(d).acompte):total(d);
+ return head(title,d.num,d)+demoBadge(d)+
+  '<section class="re-action-context" aria-label="Informations nécessaires à l’action">'+
+   '<div class="re-action-identity"><span class="re-action-label">Client</span><strong>'+client+'</strong></div>'+
+   '<div class="re-action-meta"><span>Devis '+number+'</span><span>'+esc(motive)+'</span></div>'+
+   '<div class="re-action-task"><span>'+(kind==='deposit'?'Acompte à demander':'Montant du devis')+'</span><strong>'+amount+'</strong></div>'+
+   '<p class="re-action-object">'+esc(d.obj||'Travaux à préciser')+'</p>'+
+  '</section>'+
+  '<section class="re-action-message"><div class="re-action-label">Message de '+(kind==='deposit'?'demande':'relance')+' préparé</div><p>'+esc(msg)+'</p></section>'+
+  (d.demo?
+    '<div class="re-action-demo" role="note"><strong>Simulation uniquement</strong><p>Ce dossier est fictif : aucun message ne peut être envoyé à un client réel.</p></div>'+
+    '<div class="re-primary-next">'+primaryButton('viewDossier',d.id,'Voir le dossier complet','eye')+'</div>':
+    '<div class="re-action-send"><p class="re-action-label">Choisir le canal d’envoi</p>'+contactButtons(d,kind,title)+'</div>')+
+  (kind==='deposit'&&!d.demo?'<details class="re-more"><summary>Acompte déjà reçu ?</summary><p>Ne confirmez cette étape qu’après vérification du règlement.</p>'+secondaryButton('recordDeposit',d.id,'Confirmer l’acompte reçu','check')+'</details>':'')+
+  (!d.demo?'<p class="fine">Le message n’est considéré comme envoyé qu’après votre action dans la messagerie.</p>':'');
 }
 
 function dossier(d){
@@ -333,7 +351,8 @@ function doAction(action,id,el){const d=find(id)||(cur&&cur.id===id?cur:null);
  if(action==='demoOn'){const have=new Set(D.map(x=>x.id)),next=D.concat(demonstration().filter(x=>!have.has(x.id)));if(store(K.devis,next)){D=next;store(K.demo,'on');rendreGains();route();toast('Exemples fictifs remis');}return;}
  if(!d)return;
  if(['document','options','status','contact'].includes(action)){navigate(action+'/'+d.id);return;}
- if(action==='recordDeposit'){changeStatus(d,'deposit');return;}
+ if(action==='viewDossier'){navigate('d/'+d.id);return;}
+  if(action==='recordDeposit'){changeStatus(d,'deposit');return;}
  if(action.startsWith('manual-')){changeStatus(d,action.slice(7));return;}
  if(action==='dossier'){flush();if(!find(d.id)){toast('Ajoutez un nom ou une prestation pour enregistrer ce devis.');return;}navigate('d/'+d.id);return;}
  if(action==='edit'){if(d.invoice||['signed','deposit','invoiced'].includes(d.status)){toast('Devis accepté : créez un duplicata pour toute modification.');return;}navigate('edit/'+d.id);return;}
