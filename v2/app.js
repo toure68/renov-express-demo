@@ -32,7 +32,11 @@ function total(d){return Calc.money(Calc.totals(d).ttc);}
 function find(id){return D.find(x=>x.id===id);}
 function nextNumber(){const y=new Date().getFullYear(),key=K.counter+y;let n=load(key,y===2026?COMPANY.lastNumber:0);D.forEach(d=>{const m=/^D(\d{4})-(\d+)$/.exec(d.num);if(m&&+m[1]===y)n=Math.max(n,+m[2]);});store(key,++n);return'D'+y+'-'+String(n).padStart(3,'0');}
 function saveQuote(d){
- if(!d||(!(d.client.name||'').trim()&&!d.lines.length&&!(d.obj||'').trim()))return false;
+ if(!d)return false;
+ // Conserver aussi les brouillons partiels (adresse, téléphone, email ou chantier).
+ // Seul un devis totalement vierge ne doit pas encombrer l'historique.
+ const hasClientDetails=d.client&&Object.values(d.client).some(v=>typeof v==='string'&&v.trim());
+ if(!hasClientDetails&&!(d.site||'').trim()&&!(d.obj||'').trim()&&!d.lines.length&&+d.tva===10)return false;
  if(!d.num)d.num=nextNumber();d.updated=Date.now();const next=D.slice(),i=next.findIndex(x=>x.id===d.id);if(i>=0&&next[i].invoice&&(!d.invoice||JSON.stringify(d.invoice)!==JSON.stringify(next[i].invoice)))return false;if(i<0)next.push(clone(d));else next[i]=clone(d);
  if(!store(K.devis,next))return false;D=next;preparePdf(d);return true;
 }
