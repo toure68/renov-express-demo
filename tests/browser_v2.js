@@ -169,16 +169,17 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert(/255, 159, 159/.test(color),'couleur d’alerte non appliquée : '+color);
   assert.deepEqual(errors,[]);await context.close();
  });
- await run('Filtres de statuts et archives des documents',async()=>{
+ await run('Classement intelligent et archives sans filtre encombrant',async()=>{
   const draft=sample('draft-filter','draft',{lines:[]});
   const ready=sample('ready-filter','draft');
   const {page,context,errors}=await contextPage([draft,ready]);
-  await page.locator('#homeStatusFilter').selectOption('ready');
-  assert.equal(await page.locator('#gains [data-open]').count(),1);
-  assert.equal(await page.locator('#gains [data-open="ready-filter"]').count(),1);
-  await page.locator('#homeStatusFilter').selectOption('draft');
-  assert.equal(await page.locator('#gains [data-open="draft-filter"]').count(),1);
-  await page.locator('#homeStatusFilter').selectOption('all');
+  assert.equal(await page.locator('#homeStatusFilter').count(),0,'Aucun sélecteur Tous ne doit encombrer l’accueil');
+  assert.equal(await page.locator('#gains [data-open]').count(),2);
+  await page.locator('#globalSearch').fill('Client test');
+  assert.equal(await page.locator('#gains [data-open]').count(),2);
+  await page.locator('#globalSearch').fill('introuvable');
+  assert.equal(await page.locator('#gains [data-open]').count(),0);
+  await page.locator('#clearGlobalSearch').click();
   await click(page,'#quotesArchive');
   await page.locator('#historyRows [data-open]').first().waitFor();
   assert.equal(await page.locator('#historyRows [data-open]').count(),2);
@@ -346,23 +347,20 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await expectText(page,'.re-progress-current','À relancer');
   assert.deepEqual(errors,[]);await context.close();
  });
- await run('Capture mobile : filtre Tous aligné au titre sans ligne isolée ni débordement',async()=>{
+ await run('Accueil mobile : titre visible sans sélecteur Tous',async()=>{
   const {page,context,errors}=await contextPage([sample('filter-align-ready')],{mobile:true});
   for(const width of [320,337,375,390,430,768]){
    await page.setViewportSize({width,height:760});
-   await page.waitForTimeout(80);
    const geo=await page.evaluate(()=>{
-    const heading=document.querySelector('.h2d'),title=document.querySelector('.h2d h2'),select=document.querySelector('#homeStatusFilter');
-    const container=heading.getBoundingClientRect(),a=title.getBoundingClientRect(),b=select.getBoundingClientRect();
-    return{titleTop:a.top,titleBottom:a.bottom,filterTop:b.top,filterBottom:b.bottom,filterLeft:b.left,filterRight:b.right,containerLeft:container.left,containerRight:container.right,viewport:innerWidth};
+    const title=document.querySelector('.h2d h2').getBoundingClientRect();
+    const list=document.querySelector('#gains').getBoundingClientRect();
+    return{titleLeft:title.left,titleRight:title.right,listTop:list.top,headingBottom:title.bottom,viewport:innerWidth};
    });
-   assert(geo.filterTop<=geo.titleBottom+7&&geo.filterBottom>=geo.titleTop-7,'Filtre descendu sous le titre : '+JSON.stringify({width,geo}));
-   assert(geo.filterRight<=geo.containerRight+2&&geo.filterLeft>=geo.containerLeft-2,'Filtre hors entête : '+JSON.stringify({width,geo}));
-   assert(geo.filterRight<=width+2,'Filtre déborde fenêtre : '+JSON.stringify({width,geo}));
-   if(width===337)await page.screenshot({path:'tests/screenshots/11-filtre-aligne-337px.png'});
+   assert.equal(await page.locator('#homeStatusFilter').count(),0);
+   assert(geo.titleRight<=width+2&&geo.titleLeft>=-2,'Titre débordant : '+JSON.stringify({width,geo}));
+   assert(geo.listTop>=geo.headingBottom,'Liste recouvre le titre : '+JSON.stringify({width,geo}));
+   if(width===337)await page.screenshot({path:'tests/screenshots/11-accueil-sans-filtre-337px.png'});
   }
-  await page.locator('#homeStatusFilter').selectOption('ready');
-  assert.equal(await page.locator('#gains [data-open="filter-align-ready"]').count(),1);
   assert.deepEqual(errors,[]);await context.close();
  });
  await run('PWA : recharge en mode hors connexion',async()=>{
