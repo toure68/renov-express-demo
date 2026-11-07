@@ -10,3 +10,8 @@
 @media(prefers-reduced-motion:reduce){.global-search *{transition:none!important}}
 
 .services [hidden]{display:none!important}
+
+/* Filtre de statut : dans le titre existant, sans déplacer les blocs d'accueil. */
+#homeStatusFilter{min-height:48px;max-width:140px;width:auto;padding:8px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:#153543;color:#fff;font:inherit;font-size:12px;font-weight:700}
+#homeStatusFilter:focus-visible{outline:2px solid #9bffd1;outline-offset:2px}
+.h2d{display:flex;align-items:center;flex-wrap:wrap;gap:6px}.h2d h2{flex:1 1 auto}
