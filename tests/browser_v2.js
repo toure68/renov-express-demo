@@ -99,6 +99,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   await click(page,'#service [data-action="issueInvoice"]');
   await expectText(page,'.re-progress-current','Facturé');
   await expectText(page,'.re-summary','84,00');
+  await page.locator('#service .re-more summary').first().click();
   const [download]=await Promise.all([page.waitForEvent('download'),click(page,'#service [data-action="downloadInvoice"]')]);
   assert(download.suggestedFilename().startsWith('Facture_F20'));
   await click(page,'#service [data-action="payment"]');
