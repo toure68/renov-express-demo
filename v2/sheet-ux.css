@@ -1,0 +1,27 @@
+/* Rénov’Express V2 — design contextuel des fenêtres.
+ * L'accueil de référence reste inchangé.
+ */
+.morph{--action-radius:17px}
+.morph .mbody{overscroll-behavior:contain;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:rgba(192,210,226,.32) transparent}
+.morph .cta{min-height:54px;height:auto;padding:13px 18px;border-radius:var(--action-radius);font-size:15px;font-weight:800;line-height:1.35;letter-spacing:.01em;background:linear-gradient(135deg,#276679,#1f4e5f);border:1px solid rgba(134,214,203,.25);box-shadow:0 7px 23px rgba(0,0,0,.19),inset 0 1px rgba(255,255,255,.09);transition:transform .15s ease,filter .15s ease,box-shadow .15s ease}
+.morph .cta:active,.morph .chx:active{transform:scale(.985)}
+.morph .cta:hover{filter:brightness(1.12)}
+.morph .cta:focus-visible,.morph .chx:focus-visible{outline:2px solid #e3bc60;outline-offset:3px}
+.morph .all,.morph .chx{min-height:48px;height:auto;line-height:1.4;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.065);border:1px solid rgba(180,202,222,.17);color:#eaf3f8;text-align:left}
+.morph .re-contact-row{gap:10px}
+.morph .re-contact-row a{min-height:76px;border-radius:17px;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.21),inset 0 1px rgba(255,255,255,.15);transition:transform .15s ease,filter .15s ease}
+.morph .re-contact-row a:hover{filter:brightness(1.06)}
+.morph .re-contact-row a:focus-visible{outline:2px solid #f1c24a;outline-offset:3px}
+.morph .re-wa{background:linear-gradient(155deg,#35e17b,#20bb62);color:#073b24!important}
+.morph .re-mail{background:linear-gradient(155deg,#4185ef,#2367d3);color:#fff!important}
+.morph .re-contact-row a .bi{width:26px;height:26px}
+.morph .re-primary-next{margin:14px 0}
+.morph .re-primary-next .cta{min-height:56px}
+.morph .back{flex:none;min-width:46px;min-height:46px;border-radius:15px;background:rgba(255,255,255,.09);border:1px solid rgba(186,214,233,.19)}
+.morph .top{min-height:54px}
+.morph .re-more summary{min-height:50px}
+@media(max-height:640px){
+ .morph .mbody{padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+ .morph .card{margin-top:10px}
+}
+@media(prefers-reduced-motion:reduce){.morph .cta,.morph .re-contact-row a{transition:none}}
