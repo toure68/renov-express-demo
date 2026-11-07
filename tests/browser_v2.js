@@ -404,6 +404,26 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert.deepEqual(errors,[]);
   await context.close();
  });
+ await run('Acompte réellement reçu : montant libre → facture au bon solde',async()=>{
+  const {page,context,errors}=await contextPage([sample('actual-deposit','signed',{signedAt:new Date().toISOString()})],{mobile:true});
+  page.on('dialog',dialog=>dialog.accept());
+  await page.goto(host+'/#contact/actual-deposit',{waitUntil:'load'});
+  await page.locator('#sheet.open.big .mbody.on').waitFor();
+  await page.locator('#service details summary').click();
+  await click(page,'#service [data-action="recordDeposit"]');
+  await page.locator('[data-field="p.amount"]').waitFor();
+  await page.locator('[data-field="p.amount"]').fill('42,50');
+  await click(page,'#service [data-action="confirmDeposit"]');
+  await expectText(page,'.re-progress-current','Acompte reçu');
+  await click(page,'#service [data-action="issueInvoice"]');
+  await expectText(page,'.re-progress-current','Facturé');
+  await expectText(page,'.re-summary','77,50');
+  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('re_v2_devis')).find(d=>d.id==='actual-deposit'));
+  assert.equal(stored.invoice.totals.ttc,120);
+  assert.equal(stored.payments.length,1);
+  assert.equal(stored.payments[0].amount,42.5);
+  assert.deepEqual(errors,[]);await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});

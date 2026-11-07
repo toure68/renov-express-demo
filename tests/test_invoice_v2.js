@@ -21,6 +21,18 @@ assert.equal(a.invoice.quoteNumber,'D2026-100');
 assert.equal(Invoice.nextNumber([a],2026),'F2026-002');
 assert.equal(Invoice.balance(a),180);
 // Reproduction : devis confirmé « acompte reçu » → facture avec acompte au crédit.
+const newlySigned=devis('deposit-actual');
+const actualDeposit=Invoice.recordDeposit(newlySigned,'42,50','2026-11-06','Virement');
+assert.equal(actualDeposit.status,'deposit');
+assert.equal(Invoice.paid(actualDeposit),42.50);
+assert.equal(newlySigned.status,'signed','Le devis original ne doit pas être modifié');
+const actualBill=Invoice.issue(actualDeposit,[],issuer,new Date('2026-11-07T12:00:00Z'));
+assert.equal(Invoice.paid(actualBill),42.50,'Le montant réel remplace le forfait de 30 %');
+assert.equal(Invoice.balance(actualBill),137.50);
+assert.equal(actualBill.payments.length,1,'Ne jamais doubler un acompte enregistré');
+assert.throws(()=>Invoice.recordDeposit(newlySigned,'500','2026-11-06','Carte'),/dépasse/);
+assert.throws(()=>Invoice.recordDeposit(newlySigned,'0','2026-11-06','Carte'),/valide/);
+assert.throws(()=>Invoice.recordDeposit(newlySigned,'12','2026-02-31','Carte'),/Date/);
 const paidDeposit={...devis('deposit-1'),status:'deposit',depositAt:'2026-11-06T15:30:00Z'};
 const billWithDeposit=Invoice.issue(paidDeposit,[a],issuer,new Date('2026-11-07T12:00:00Z'));
 assert.equal(billWithDeposit.status,'invoiced');

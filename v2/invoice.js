@@ -54,6 +54,20 @@
  }
  function paid(d){return round((Array.isArray(d.payments)?d.payments:[]).reduce((a,p)=>a+Number(p.amount||0),0));}
  function balance(d){const amount=d.invoice?d.invoice.totals.ttc:Calc.totals(d).ttc;return Math.max(0,round(amount-paid(d)));}
+ function recordDeposit(d,amount,date,method){
+  if(!d||!['signed','deposit'].includes(d.status)||d.invoice)throw Error('Le devis doit être signé et non facturé');
+  const n=Calc.parseNum(amount),ttc=Calc.totals(d).ttc;
+  if(n===null||!Number.isFinite(n)||n<=0||!Number.isFinite(ttc)||ttc<=0)throw Error('Saisissez un montant d’acompte valide');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))||!Number.isFinite(new Date(date+'T12:00:00').getTime())||new Date(date+'T12:00:00').toISOString().slice(0,10)!==date)throw Error('Date de réception incorrecte');
+  const previous=paid(d);
+  if(cents(previous+n)>cents(ttc))throw Error('Le total encaissé dépasse le montant TTC du devis');
+  const copy=clone(d),when=new Date().toISOString();
+  copy.payments=Array.isArray(copy.payments)?copy.payments:[];
+  copy.payments.push({amount:round(n),date,method:String(method||'Autre').slice(0,60),kind:'deposit',createdAt:when});
+  copy.status='deposit';
+  if(!copy.depositAt)copy.depositAt=when;
+  return copy;
+ }
  function addPayment(d,amount,date,method){
   if(!d||!d.invoice)throw Error('Aucune facture émise');
   const n=Number(String(amount).replace(',','.'));
@@ -107,7 +121,7 @@
    text(c.name+' · SIRET '+c.siret,15,286);pdf.text('Facture '+i.num+' · '+page+'/'+count,195,286,{align:'right'});}
   return pdf;
  }
- const api={issuerProblems,isValidIssuer,nextNumber,issue,paid,balance,addPayment,buildPDF};
+ const api={issuerProblems,isValidIssuer,nextNumber,issue,paid,balance,recordDeposit,addPayment,buildPDF};
  if(typeof module!=='undefined'&&module.exports)module.exports=api;
  else root.InvoiceLogic=api;
 })(typeof window!=='undefined'?window:this);

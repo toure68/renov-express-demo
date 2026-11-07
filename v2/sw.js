@@ -1,5 +1,5 @@
 /* Service worker : met toute l'application en cache pour fonctionner sans réseau */
-var VERSION = 'renovexpress-v2-home-spacing-1';
+var VERSION = 'renovexpress-v2-deposit-actual-1';
 var FILES = [
   './', 'index.html', 'forms.css', 'home-search.css', 'config.js', 'brand.config.json', 'branding.js', 'appearance.css', 'appearance.js', 'workflow.js', 'context-flow.js', 'context-progress.css', 'sheet-ux.css', 'storage-tools.js', 'invoice.js', 'app.js', 'pdf-share.js', 'calc.js', 'pdf.js', 'data.js',
   'lib/jspdf.umd.min.js', 'lib/jspdf.plugin.autotable.min.js',
