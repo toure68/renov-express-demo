@@ -57,4 +57,8 @@ assert.equal(Storage.validate({...backup,devis:[simulated]}),true,'Une simulatio
 assert.equal(Storage.merge([{...devis('q2'),id:'q2'}],backup).length,2);
 assert.throws(()=>Storage.merge([{...devis('q2'),id:'q2',invoice:{num:'F2026-001'}}],backup),/Numéro de facture/);
 assert.throws(()=>Storage.validate({...backup,devis:[a,a]}),/dupliqué/);
+assert.throws(()=>Storage.validate({...backup,devis:[{...a,signature:{data:'x\" onerror=\"alert(1)'}}]}),/Signature de sauvegarde invalide/);
+assert.throws(()=>Storage.validate({...backup,devis:[{...a,invoice:{num:'F2026-001'}}]}),/Données de facture invalides/);
+assert.throws(()=>Storage.validate({...backup,devis:[{...a,payments:[{amount:-100,method:'Espèces'}]}]}),/Règlements invalides/);
+
 console.log('Factures, paiements et sauvegardes : tests réussis.');
