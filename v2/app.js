@@ -16,7 +16,7 @@ function demonstration(){
  function make(id,num,name,obj,price,tva,status,days,title,lastName){
   const createdAt=ago(8);return{id,num,date:localISO(new Date(createdAt)),client:{name,addr:'Adresse fictive · Lyon',email:name.toLowerCase().replace(/ /g,'.')+'@example.com',tel:'',title,lastName},site:'',obj,lines:[{code:'',label:obj,qty:1,unit:'forfait',price}],tva,status,demo:true,createdAt,updated:now-days*864e5,...(['sent','late'].includes(status)?{sentAt:ago(days)}:{}),...(status==='signed'?{signedAt:ago(days)}:{})};
  }
- const docs=[make('demo-claire','D2026-042','Claire Dubois','Rénovation séjour et chambre',2847,10,'sent',6,'Madame','Dubois'),make('demo-paul','D2026-043','Paul Martin','Peinture cuisine',1033.33,20,'draft',0,'Monsieur','Martin'),make('demo-sophie','D2026-044','Sophie Bernard','Plafonds et boiseries',2066.67,20,'signed',2,'Madame','Bernard'),make('demo-karim','D2026-045','Karim Benali','Peinture du séjour',500,10,'draft',0,'Monsieur','Benali'),make('demo-julie','D2026-046','Julie Moreau','Couloir et entrée',809.09,10,'sent',1,'Madame','Moreau')];
+ const docs=[make('demo-claire','D2026-042','Claire Dubois','Rénovation séjour et chambre',2807,10,'sent',6,'Madame','Dubois'),make('demo-paul','D2026-043','Paul Martin','Peinture cuisine',1033.33,20,'draft',0,'Monsieur','Martin'),make('demo-sophie','D2026-044','Sophie Bernard','Plafonds et boiseries',2066.67,20,'signed',2,'Madame','Bernard'),make('demo-karim','D2026-045','Karim Benali','Peinture du séjour',500,10,'draft',0,'Monsieur','Benali'),make('demo-julie','D2026-046','Julie Moreau','Couloir et entrée',809.09,10,'sent',1,'Madame','Moreau')];
  docs[3].client.email='';return docs;
 }
 let D=load(K.devis,null);if(!Array.isArray(D)){D=load(K.demo,'on')==='off'?[]:demonstration();store(K.devis,D);}
@@ -89,7 +89,7 @@ function contactButtons(d,kind,text,extra=''){
  return'<div class="re-contact '+extra+'"><p class="re-contact-label">'+esc(text)+' via :</p><div class="re-contact-row '+(!whatsapp||!mail?'re-one-channel':'')+'">'+whatsapp+mail+'</div><p class="fine">Le message doit être envoyé par vous dans l’application choisie.</p></div>';
 }
 const ACTION_ICON={send:'send',edit:'pen',sign:'sign',invoiced:'euro',document:'eye',contact:'send',confirmSent:'check',issueInvoice:'euro',payment:'euro',downloadInvoice:'download'};
-function actionHTML(d,action,text,extra=''){const next=action==='relance'||action==='deposit'?'contact':action;return primaryButton(next,d.id,esc(text),ACTION_ICON[next]||'check').replace('class="cta"','class="cta '+extra+'"');}
+function actionHTML(d,action,text,extra=''){const next=action==='relance'||action==='deposit'?'contact':action;return primaryButton(next,d.id,esc(text),ACTION_ICON[next]||'check').replace('class="cta"','class="cta '+extra+(action==='relance'?' re-relance':'')+'"');}
 function rendreHero(){const h=$('#hero'),d=F.prioritaire(D);HEROD=d;
  if(!d){h.className='hero';h.innerHTML='<div class="lbl">Mes devis</div>'+(demoActive()?'<div class="demo">Démonstration · fictif</div>':'')+'<div class="amount">'+Calc.money(D.filter(x=>['sent','late'].includes(F.etatDossier(x))).reduce((n,x)=>n+Calc.totals(x).ttc,0))+'</div><div class="paid">'+esc(summary())+'</div>';return;}
  const info=F.heroInfo(d);h.className='hero vedette'+(F.etatDossier(d)==='late'||F.invoiceOverdue(d)?' alerte':'');

@@ -111,3 +111,7 @@ header>div:first-child{min-width:0}.name img{max-width:100%;height:auto}
  .theme-list{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(prefers-reduced-motion:reduce){.morph,.mbody,.sheet-bg{transition:none!important}}
+
+/* Logo sans fond : version claire sur les thèmes sombres */
+header .name img{border-radius:0!important;background:none!important}
+html[data-theme="petrol"] header .name img[src="logo.svg"],html[data-theme="night"] header .name img[src="logo.svg"]{content:url(logo-clair.svg)}
