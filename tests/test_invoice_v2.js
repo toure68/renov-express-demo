@@ -1,0 +1,31 @@
+/* Régression métiers hors réseau : node tests/test_invoice_v2.js */
+const assert=require('node:assert/strict');
+global.Calc=require('../v2/calc.js');
+const Invoice=require('../v2/invoice.js');
+const Storage=require('../v2/storage-tools.js');
+const issuer={name:'Entreprise BTP Réelle',address:'1 rue du Bâtiment',city:'75001 Paris',siret:'12345678901234',insurer:'Assurance test',email:'contact@exemple.fr',payment:'Virement à 30 jours'};
+function devis(id='q1'){return{id,status:'signed',num:'D2026-100',client:{name:'Client',addr:'2 rue de Paris'},obj:'Travaux',site:'Paris',lines:[{label:'Peinture',qty:2,unit:'m²',price:75}],tva:20,demo:false};}
+assert.equal(Invoice.isValidIssuer(issuer),true);
+assert.equal(Invoice.isValidIssuer({...issuer,siret:'000 000 000 00000 (fictif)'}),false);
+assert.throws(()=>Invoice.issue({...devis(),demo:true},[],issuer),/démonstration/);
+assert.throws(()=>Invoice.issue({...devis(),status:'draft'},[],issuer),/accord/);
+const a=Invoice.issue(devis(),[],issuer,new Date('2026-11-07T12:00:00Z'));
+assert.equal(a.invoice.num,'F2026-001');
+assert.equal(a.invoice.totals.ttc,180);
+assert.equal(a.invoice.quoteNumber,'D2026-100');
+assert.equal(Invoice.nextNumber([a],2026),'F2026-002');
+assert.equal(Invoice.balance(a),180);
+const p=Invoice.addPayment(a,50,'2026-11-07','Virement');
+assert.equal(Invoice.paid(p),50);
+assert.equal(Invoice.balance(p),130);
+assert.equal(Invoice.balance(a),180,'La création de paiement ne doit pas modifier la facture source');
+assert.throws(()=>Invoice.addPayment(p,150,'2026-11-07','Virement'),/dépasse/);
+assert.throws(()=>Invoice.addPayment(p,-1,'2026-11-07','Carte'),/Montant/);
+assert.throws(()=>Invoice.addPayment(p,1,'2026-02-31','Carte'),/Date/);
+const paid=Invoice.addPayment(p,130,'2026-11-07','Carte');assert.equal(Invoice.balance(paid),0);
+const backup={format:'renov-express-v2-backup',version:1,devis:[a],tarifs:[],company:issuer};
+assert.equal(Storage.validate(backup),true);
+assert.equal(Storage.merge([{...devis('q2'),id:'q2'}],backup).length,2);
+assert.throws(()=>Storage.merge([{...devis('q2'),id:'q2',invoice:{num:'F2026-001'}}],backup),/Numéro de facture/);
+assert.throws(()=>Storage.validate({...backup,devis:[a,a]}),/dupliqué/);
+console.log('Factures, paiements et sauvegardes : tests réussis.');
