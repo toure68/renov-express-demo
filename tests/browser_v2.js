@@ -96,14 +96,14 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   page.on('dialog',dialog=>dialog.accept());
   await click(page,'#gains [data-open="d1"]');
   await expectText(page,'.re-progress-current','Acompte reçu');
-  await click(page,'[data-action="issueInvoice"]');
+  await click(page,'#service [data-action="issueInvoice"]');
   await expectText(page,'.re-progress-current','Facturé');
   await expectText(page,'.re-summary','84,00');
-  const [download]=await Promise.all([page.waitForEvent('download'),click(page,'[data-action="downloadInvoice"]')]);
+  const [download]=await Promise.all([page.waitForEvent('download'),click(page,'#service [data-action="downloadInvoice"]')]);
   assert(download.suggestedFilename().startsWith('Facture_F20'));
-  await click(page,'[data-action="payment"]');
+  await click(page,'#service [data-action="payment"]');
   await page.locator('[data-field="p.amount"]').fill('84');
-  await click(page,'[data-action="savePayment"]');
+  await click(page,'#service [data-action="savePayment"]');
   await expectText(page,'.re-primary-next','Télécharger la facture');
   assert.deepEqual(errors,[]);await context.close();
  });
