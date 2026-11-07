@@ -47,7 +47,7 @@ function totalsSummary(list,now=new Date()){
  const signed=list.filter(d=>['signed','deposit','invoiced'].includes(etatDossier(d,+now))&&d.signedAt&&new Date(d.signedAt).getMonth()===now.getMonth()&&new Date(d.signedAt).getFullYear()===now.getFullYear()).length;
  return`${pending} devis en attente · ${signed} signé${signed>1?'s':''} ce mois-ci`;
 }
-function documentKind(d){return d.status==='invoiced'?'invoices':'quotes';}
+function documentKind(d){return d.invoice?'invoices':'quotes';}
 function historyDocuments(list,group){return group==='quotes'||group==='invoices'?list.filter(d=>documentKind(d)===group):list.slice();}
 function needsAttention(d){return documentKind(d)==='quotes'||invoiceOverdue(d);}
 const api={documentKind,historyDocuments,needsAttention,invoiceOverdue,RANG,ETAPES,missing,days,etatDossier,ordre,prioritaire,heroInfo,relanceMessage,totalsSummary};
