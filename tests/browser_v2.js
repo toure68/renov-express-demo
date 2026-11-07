@@ -363,6 +363,47 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   }
   assert.deepEqual(errors,[]);await context.close();
  });
+ await run('Accueil professionnel : respiration entre boutons, titres, cartes et documents',async()=>{
+  const {page,context,errors}=await contextPage([
+    sample('space-1','sent',{sentAt:'2026-10-30T10:00:00Z'}),
+    sample('space-2'),sample('space-3'),sample('space-4')
+  ],{mobile:true});
+  for(const width of [320,337,375,390,430,768]){
+    await page.setViewportSize({width,height:820});
+    await page.waitForTimeout(100);
+    const gaps=await page.evaluate(()=>{
+      const rect=s=>document.querySelector(s)?.getBoundingClientRect();
+      const actions=rect('#home > .actions'),buttons=[...document.querySelectorAll('#home > .actions .act')].map(el=>el.getBoundingClientRect());
+      const title=rect('#home > .h2d'),first=rect('#gains .row'),rows=[...document.querySelectorAll('#gains .row')].map(el=>el.getBoundingClientRect());
+      const explorer=rect('#quoteExplorer .explorer'),docsTitle=rect('#quoteExplorer + h2'),docs=rect('#documents');
+      const search=rect('#home > .global-search');
+      const between=(a,b)=>Math.round((b.top-a.bottom)*10)/10;
+      return {
+        width:innerWidth,
+        searchToActions:between(search,actions),
+        buttonsGap:Math.round((buttons[1].left-buttons[0].right)*10)/10,
+        actionsToTitle:between(actions,title),
+        titleToFirstRow:between(title,first),
+        betweenRows:rows.slice(1).map((r,i)=>between(rows[i],r)),
+        explorerToDocumentsHeading:between(explorer,docsTitle),
+        headingToDocuments:between(docsTitle,docs),
+        horizontalOverflow:document.documentElement.scrollWidth>innerWidth+2
+      };
+    });
+    assert(gaps.searchToActions>=14,'Recherche collée aux boutons : '+JSON.stringify(gaps));
+    assert(gaps.buttonsGap>=11,'Les gros boutons sont collés : '+JSON.stringify(gaps));
+    assert(gaps.actionsToTitle>=23,'Titre coincé sous les boutons : '+JSON.stringify(gaps));
+    assert(gaps.titleToFirstRow>=12,'Première carte collée au titre : '+JSON.stringify(gaps));
+    assert(gaps.betweenRows.every(g=>g>=9),'Dossiers trop rapprochés : '+JSON.stringify(gaps));
+    assert(gaps.explorerToDocumentsHeading>=27,'Documents collés à Explorer : '+JSON.stringify(gaps));
+    assert(gaps.headingToDocuments>=12,'Cartes documents collées au titre : '+JSON.stringify(gaps));
+    assert(!gaps.horizontalOverflow,'Débordement horizontal : '+JSON.stringify(gaps));
+    if(width===337)await page.screenshot({path:'tests/screenshots/12-accueil-respiration-337.png',fullPage:true});
+    if(width===390)await page.screenshot({path:'tests/screenshots/13-accueil-respiration-390.png',fullPage:true});
+  }
+  assert.deepEqual(errors,[]);
+  await context.close();
+ });
  await run('PWA : recharge en mode hors connexion',async()=>{
   const {page,context,errors}=await contextPage([sample('off1')],{mobile:true});
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
