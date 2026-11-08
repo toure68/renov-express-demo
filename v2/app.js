@@ -45,6 +45,17 @@ function flush(){clearTimeout(saveTimer);if(cur&&routeKind==='edit')saveQuote(cu
 function persistEdit(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{if(cur){saveQuote(cur);const n=$('#editNumber');if(n)n.textContent=cur.num||'Nouveau devis';rendreGains();}},400);}
 function blank(){return{id:uid(),num:'',date:localISO(new Date()),client:{name:'',addr:'',email:'',tel:''},site:'',obj:'',lines:[],tva:10,status:'draft',createdAt:new Date().toISOString(),demo:false};}
 function newQuote(){flush();cur=blank();navigate('edit/'+cur.id);}
+// Facture accessible en un clic, tout en préservant les validations métier.
+function invoiceStartView(){
+ const eligible=D.filter(d=>!d.invoice&&['signed','deposit'].includes(d.status));
+ return head('Nouvelle facture','Choisir un devis accepté')+
+  '<p class="fine">Une facture est liée à un devis accepté. Aucune création sans confirmation.</p>'+
+  (eligible.length?'<div class="re-invoice-choices">'+eligible.map(d=>
+   '<div class="card"><strong>'+esc(d.client.name||d.num)+'</strong><p class="fine">'+esc(d.obj||d.num)+' · '+Calc.money(Calc.totals(d).ttc)+' TTC</p>'+
+   secondaryButton('issueInvoice',d.id,'Créer la facture','euro')+'</div>').join('')+'</div>':
+   '<div class="card"><p>Aucun devis accepté prêt à facturer.</p><p class="fine">Ouvrez un devis et enregistrez l’accord client avant de créer une facture.</p></div>')+
+  secondaryButton('back','','Retour à l’accueil','down');
+}
 const IC={doc:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9ZM14 3v6h6M8 13h8M8 17h5"/>',down:'<path d="m6 9 6 6 6-6"/>',euro:'<path d="M18 5a7 7 0 1 0 0 14M4 10h11M4 14h10"/>',check:'<path d="m5 12 4 4L19 6"/>',
  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
  send:'<path d="M21 3 10 14M21 3l-7 18-4-7-7-4Z"/>',
@@ -151,7 +162,14 @@ function optionsView(d){
 }
 
 function field(label,key,value,type='text',area=false){return'<label class="re-field">'+label+(area?'<textarea data-field="'+key+'" rows="2">'+esc(value)+'</textarea>':'<input data-field="'+key+'" type="'+type+'" value="'+esc(value)+'"'+(type==='email'?' autocomplete="email"':type==='tel'?' inputmode="tel"':/\.(price|qty)$/.test(key)?' inputmode="decimal"':'')+'>')+'</label>';}
-function editView(d){return head(d.num||'Nouveau devis','Devis de peinture',d)+'<div class="fine" style="text-align:left" id="editNumber">'+esc(d.num||'Nouveau devis')+'</div>'+demoBadge(d)+'<fieldset'+(d.signature?' disabled':'')+'><div class="card"><span class="tag">Client</span>'+field('Nom','client.name',d.client.name)+field('Adresse','client.addr',d.client.addr,'text',true)+field('Email','client.email',d.client.email,'email')+field('Téléphone','client.tel',d.client.tel,'tel')+'</div><div class="card"><span class="tag">Chantier</span>'+field('Objet','obj',d.obj)+field('Adresse du chantier','site',d.site,'text',true)+'</div><h2>Prestations</h2><div id="editLines">'+linesHTML(d)+'</div>'+secondaryButton('pick',d.id,'Ajouter une prestation','list')+secondaryButton('free',d.id,'Ajouter une ligne libre','plus')+'<div class="card"><span class="tag">TVA</span><div class="re-tva"><button data-tva="10" class="'+(+d.tva===10?'on':'')+'">10 %</button><button data-tva="20" class="'+(+d.tva===20?'on':'')+'">20 %</button></div><div id="editTotals">'+totalsHTML(d)+'</div></div></fieldset>'+(d.signature?'<div class="hint">Ce devis est signé. Pour le modifier, vous devez d’abord retirer sa signature.</div>':'')+'<div class="actbar">'+primaryButton(d.signature?'unlock':'save',d.id,d.signature?'Retirer la signature pour modifier':'Enregistrer le devis',d.signature?'unlock':'save')+'</div><p class="fine">Enregistrement automatique sur cet appareil.</p>';}
+function quickTariffsView(){
+ const choices=tarifs.map((t,i)=>({t,i})).filter(({t})=>t.label&&Calc.parseNum(t.price)!==null).slice(0,4);
+ if(!choices.length)return '';
+ return '<div class="re-quick-tariffs" role="group" aria-label="Prestations fréquentes"><p class="re-quick-title">Prestations fréquentes · ajouter en 1 clic</p><div class="re-quick-grid">'+
+  choices.map(({t,i})=>'<button type="button" class="re-quick-tariff" data-tarif="'+i+'" data-pick="1"><span>'+esc(t.label)+'</span><small>'+priceLabel(t)+'</small></button>').join('')+
+  '</div></div>';
+}
+function editView(d){return head(d.num||'Nouveau devis','Devis de peinture',d)+'<div class="fine" style="text-align:left" id="editNumber">'+esc(d.num||'Nouveau devis')+'</div>'+demoBadge(d)+'<fieldset'+(d.signature?' disabled':'')+'><div class="card"><span class="tag">Client</span>'+field('Nom','client.name',d.client.name)+field('Adresse','client.addr',d.client.addr,'text',true)+field('Email','client.email',d.client.email,'email')+field('Téléphone','client.tel',d.client.tel,'tel')+'</div><div class="card"><span class="tag">Chantier</span>'+field('Objet','obj',d.obj)+field('Adresse du chantier','site',d.site,'text',true)+'</div><h2>Prestations</h2><div id="editLines">'+linesHTML(d)+'</div>'+quickTariffsView()+secondaryButton('pick',d.id,'Toutes les prestations','list')+secondaryButton('free',d.id,'Ajouter une ligne libre','plus')+'<div class="card"><span class="tag">TVA</span><div class="re-tva"><button data-tva="10" class="'+(+d.tva===10?'on':'')+'">10 %</button><button data-tva="20" class="'+(+d.tva===20?'on':'')+'">20 %</button></div><div id="editTotals">'+totalsHTML(d)+'</div></div></fieldset>'+(d.signature?'<div class="hint">Ce devis est signé. Pour le modifier, vous devez d’abord retirer sa signature.</div>':'')+'<div class="actbar">'+primaryButton(d.signature?'unlock':'save',d.id,d.signature?'Retirer la signature pour modifier':'Enregistrer le devis',d.signature?'unlock':'save')+'</div><p class="fine">Enregistrement automatique sur cet appareil.</p>';}
 function linesHTML(d){return d.lines.map((l,i)=>'<div class="card re-line" data-line="'+i+'">'+field('Prestation','line.'+i+'.label',l.label,'text',true)+'<div class="re-grid three">'+field('Quantité','line.'+i+'.qty',Calc.qty(l.qty,''))+field('Unité','line.'+i+'.unit',surfaceUnit(l.unit))+field('Prix HT €','line.'+i+'.price',l.price===null?'':String(l.price).replace('.',','))+'</div><div class="re-foot"><button class="lien re-del" data-action="deleteLine" data-i="'+i+'">'+bi('trash')+'<span>Supprimer</span></button><b data-line-total>'+Calc.money(Calc.lineTotalCents(l)/100)+'</b></div>'+(l.price===null?'<p class="re-error">Prix à saisir : prestation sur devis.</p>':'')+'</div>').join('')||'<p class="empty">Aucune prestation pour l’instant.</p>';}
 function totalsHTML(d){const t=Calc.totals(d);return[['Total HT',t.ht],['TVA '+d.tva+' %',t.tva],['Total TTC',t.ttc],['Acompte 30 %',t.acompte]].map(x=>'<div class="opt'+(x[0]==='Total TTC'?' re-total-ttc':'')+'"><span>'+x[0]+'</span><b>'+Calc.money(x[1])+'</b></div>').join('');}
 function priceLabel(t){const p=Calc.parseNum(t.price);return p===null?'Sur devis':Calc.money(p)+(t.unit?' / '+esc(surfaceUnit(t.unit)):'');}
@@ -336,6 +354,7 @@ function route(){
   if(kind==='company'){cur=null;renderSheet(companyView(),true);return;}
  if(kind==='history'){if(id==='invoices'&&!AppConfig.features.invoicing){navigate('');return;}cur=null;renderSheet(historyView(),true);return;}
  if(kind==='tarifs'){cur=null;renderSheet(tariffView(false),true);return;}
+ if(kind==='invoice-start'){if(!AppConfig.features.invoicing){navigate('');return;}cur=null;renderSheet(invoiceStartView(),true);return;}
  if(kind==='tarif'){cur=null;renderSheet(editTariffView(+id),true);return;}
  if(!d){navigate('');return;}
  if(kind==='edit'){if(d.invoice||['signed','deposit','invoiced'].includes(d.status)){toast('Dossier accepté : dupliquez le devis pour modifier sans altérer l’original.');navigate('d/'+d.id);return;}cur=clone(d);renderSheet(editView(cur),true);if(scrollLast){scrollLast=false;const lines=body.querySelectorAll('.re-line');if(lines.length)lines[lines.length-1].scrollIntoView({block:'center'});}return;}
@@ -426,7 +445,7 @@ document.addEventListener('keydown',e=>{
 });
 const search=$('#globalSearch'),clearSearch=$('#clearGlobalSearch');if(search){search.addEventListener('input',()=>{GLOBAL_QUERY=search.value;clearSearch.hidden=!GLOBAL_QUERY;rendreGains();});if(clearSearch)clearSearch.onclick=()=>{search.value='';GLOBAL_QUERY='';clearSearch.hidden=true;rendreGains();search.focus();};}
 document.addEventListener('pointerdown',e=>{if(e.target.closest('button,.act,.svc')&&typeof navigator.vibrate==='function')navigator.vibrate(8);},{passive:true});
-$('#appearance').onclick=()=>navigate('appearance');$('#newQuote').onclick=newQuote;$('#tarifs').onclick=()=>navigate('tarifs');$('#history').onclick=()=>navigate('history');backdrop.onclick=()=>{}; // Un clic hors du panneau ne ferme pas le formulaire.
+$('#appearance').onclick=()=>navigate('appearance');$('#newQuote').onclick=newQuote;$('#newInvoice').onclick=()=>navigate('invoice-start');if(!AppConfig.features.invoicing)$('#newInvoice').hidden=true;$('#tarifs').onclick=()=>navigate('tarifs');$('#history').onclick=()=>navigate('history');backdrop.onclick=()=>{}; // Un clic hors du panneau ne ferme pas le formulaire.
 let grabY=null,grabDelta=0;$('#grab').addEventListener('pointerdown',e=>{grabY=e.clientY;grabDelta=0;$('#grab').setPointerCapture(e.pointerId);});$('#grab').addEventListener('pointermove',e=>{if(grabY!==null)grabDelta=e.clientY-grabY;});$('#grab').addEventListener('pointerup',()=>{if(grabY===null)return;grabY=null;if(grabDelta>80)navigate(parentRoute());else if(grabDelta<-40||Math.abs(grabDelta)<6){expandSheet();}});
 body.addEventListener('scroll',()=>{if(body.scrollTop>12){expandSheet();}});
 function refreshClock(){rendreGains();const d=find(routeId);if(routeKind==='d'&&d&&F.etatDossier(d)!==lastState)route();}
