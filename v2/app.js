@@ -425,7 +425,7 @@ document.addEventListener('keydown',e=>{
 });
 const search=$('#globalSearch'),clearSearch=$('#clearGlobalSearch');if(search){search.addEventListener('input',()=>{GLOBAL_QUERY=search.value;clearSearch.hidden=!GLOBAL_QUERY;rendreGains();});if(clearSearch)clearSearch.onclick=()=>{search.value='';GLOBAL_QUERY='';clearSearch.hidden=true;rendreGains();search.focus();};}
 document.addEventListener('pointerdown',e=>{if(e.target.closest('button,.act,.svc')&&typeof navigator.vibrate==='function')navigator.vibrate(8);},{passive:true});
-$('#appearance').onclick=()=>navigate('appearance');$('#newQuote').onclick=newQuote;$('#tarifs').onclick=()=>navigate('tarifs');$('#history').onclick=()=>navigate('history');backdrop.onclick=()=>navigate('');
+$('#appearance').onclick=()=>navigate('appearance');$('#newQuote').onclick=newQuote;$('#tarifs').onclick=()=>navigate('tarifs');$('#history').onclick=()=>navigate('history');backdrop.onclick=()=>{}; // Un clic hors du panneau ne ferme pas le formulaire.
 let grabY=null,grabDelta=0;$('#grab').addEventListener('pointerdown',e=>{grabY=e.clientY;grabDelta=0;$('#grab').setPointerCapture(e.pointerId);});$('#grab').addEventListener('pointermove',e=>{if(grabY!==null)grabDelta=e.clientY-grabY;});$('#grab').addEventListener('pointerup',()=>{if(grabY===null)return;grabY=null;if(grabDelta>80)navigate(parentRoute());else if(grabDelta<-40||Math.abs(grabDelta)<6){expandSheet();}});
 body.addEventListener('scroll',()=>{if(body.scrollTop>12){expandSheet();}});
 function refreshClock(){rendreGains();const d=find(routeId);if(routeKind==='d'&&d&&F.etatDossier(d)!==lastState)route();}
