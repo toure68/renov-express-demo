@@ -47,3 +47,14 @@ button:focus-visible,[role=button]:focus-visible,a:focus-visible,input:focus-vis
 /* Bouton « Relancer » de la carte À faire maintenant : vert vif */
 .cta.re-relance{background:#16a34a!important;color:#fff!important;box-shadow:0 6px 18px rgba(22,163,74,.35)!important;border-color:transparent!important}
 .cta.re-relance:active{background:#15803d!important}
+
+/* V2 — raccourcis tactiles lisibles, sans menus imbriqués */
+.re-quick-tariffs{margin:14px 0 16px}
+.re-quick-title{font-size:13px;font-weight:700;margin:0 0 10px;color:var(--muted2,#b9c1d1)}
+.re-quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.re-quick-tariff{min-height:78px;padding:11px;border-radius:14px;border:1px solid var(--card-line,rgba(255,255,255,.15));background:var(--card,rgba(255,255,255,.07));color:inherit;text-align:left;font:inherit;display:flex;flex-direction:column;justify-content:center;gap:5px;cursor:pointer}
+.re-quick-tariff span{font-size:13px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.re-quick-tariff small{font-size:12px;opacity:.85}
+.re-quick-tariff:active{transform:scale(.98)}
+.re-invoice-choices .card{margin-bottom:12px}
+.re-invoice-choices .card>.all{margin-top:12px}
