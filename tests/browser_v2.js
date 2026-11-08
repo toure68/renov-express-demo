@@ -7,6 +7,7 @@ const assert=require('node:assert/strict');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
+const {execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'../v2');
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'};
 const host='http://127.0.0.1:8765';
@@ -422,6 +423,41 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert.equal(stored.invoice.totals.ttc,120);
   assert.equal(stored.payments.length,1);
   assert.equal(stored.payments[0].amount,42.5);
+  assert.deepEqual(errors,[]);await context.close();
+ });
+ await run('PDF réel Claire Dubois : m² visible, médiateur fictif et certificat TVA signé',async()=>{
+  const q=sample('pdf-claire','draft',{
+   num:'D2026-142',tva:10,demo:true,client:{name:'Claire Dubois',addr:'1 rue Fictive, 75001 Paris',email:'claire.dubois@example.com',tel:''},
+   obj:'Peinture du séjour (exemple fictif)',site:'Paris',lines:[{label:'Peinture des murs',unit:'m2',qty:12,price:25}]
+  });
+  const {page,context,errors}=await contextPage([q],{mobile:true});
+  await page.goto(host+'/#document/pdf-claire',{waitUntil:'load'});
+  await expectText(page,'#service','m²');
+  const pdfData=await page.evaluate((quote)=>{
+    const bytes=new Uint8Array(PDFDevis.build(quote).output('arraybuffer'));
+    let data='';for(let i=0;i<bytes.length;i+=8192)data+=String.fromCharCode(...bytes.subarray(i,i+8192));
+    return btoa(data);
+  },q);
+  const pdfFile=path.resolve(__dirname,'screenshots','Devis_Claire_Dubois_m2.pdf');
+  fs.writeFileSync(pdfFile,Buffer.from(pdfData,'base64'));
+  const extract=execFileSync('pdftotext',['-layout',pdfFile,'-'],{encoding:'utf8'});
+  assert(extract.includes('m²'),'La police PDF ne rend pas m² en texte : '+extract.slice(0,1200));
+  assert(!/Peinture des murs\s+m2\s/.test(extract),'Unité m2 non corrigée');
+  assert(extract.includes('Médiation Exemple (fictif)'),'Médiateur fictif absent : '+extract.slice(0,1800));
+  assert(extract.includes('www.mediation-exemple.fr'),'Adresse du médiateur absente');
+  assert(extract.includes('Je soussigné(e), Claire Dubois'),'Nom non rempli dans la certification');
+  assert(extract.includes('Signature du client :'),'Ligne de signature absente');
+  assert(!extract.includes('[Mention de certification'),'Ancien texte de certification conservé');
+  const pages=Number(execFileSync('pdfinfo',[pdfFile],{encoding:'utf8'}).match(/Pages:\s*(\d+)/)?.[1]||0);
+  assert(pages>=2&&pages<=5,'Pagination PDF incorrecte : '+pages);
+  for(let n=1;n<=pages;n++){
+   const pageText=execFileSync('pdftotext',['-f',String(n),'-l',String(n),pdfFile,'-'],{encoding:'utf8'});
+   if(n===1||pageText.includes('Certification du client')){
+    const dest=path.resolve(__dirname,'screenshots',n===1?'14-devis-claire-m2':'15-certification-tva');
+    execFileSync('pdftoppm',['-f',String(n),'-l',String(n),'-r','140','-png','-singlefile',pdfFile,dest],{timeout:30000});
+    assert(fs.existsSync(dest+'.png'));
+   }
+  }
   assert.deepEqual(errors,[]);await context.close();
  });
  await run('PWA : recharge en mode hors connexion',async()=>{

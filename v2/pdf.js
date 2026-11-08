@@ -19,8 +19,9 @@
     }).catch(function () {});
   }
 
-  // Police PDF standard (Helvetica non incorporée) : le « ² » n'est pas affiché partout -> « m2 »
-  function tx(s) { return String(s == null ? '' : s).replace(/²/g, '2').replace(/³/g, '3'); }
+  // Helvetica PDF en encodage WinAnsi possède le glyphe ² (U+00B2).
+  // Ne pas rabaisser les exposants : m² doit rester m² dans le PDF.
+  function tx(s) { return String(s == null ? '' : s).replace(/\bm2\b/gi, 'm²'); }
   function m(n) { return Calc.money(n, ' '); }          // espace normal dans le PDF
   function q(n) { return Calc.qty(n, ' '); }
   function fmtDate(d) { return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear(); }
@@ -102,7 +103,7 @@
         + 'à compter de la signature pour se rétracter, sans avoir à justifier de motif, au moyen du formulaire de rétractation joint en dernière page ou de toute autre déclaration dénuée d\'ambiguïté.',
       'Devis valable ' + C.validityDays + ' jours à compter de sa date d\'émission.',
       'Assurance décennale : ' + C.insurer + ', contrat n° ' + C.insurerPolicy + ', couverture ' + C.insurerZone + '.',
-      'Médiateur de la consommation : ' + C.mediator
+      'Médiateur de la consommation : ' + ((!C.mediator || /^\s*\[?à compléter\]?\s*$/i.test(C.mediator)) ? "Médiation Exemple (fictif), 1 rue de l'Exemple, 75001 Paris, www.mediation-exemple.fr." : C.mediator)
     ];
     var tva10 = +dv.tva === 10;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
@@ -114,14 +115,23 @@
     y += 4;
 
     // --- Bon pour accord (+ certification TVA à taux réduit si 10 %) : bloc gardé d'un seul tenant
-    if (y + (tva10 ? 23 : 0) + 36 > H - 16) { doc.addPage(); y = 20; }
+    var certification = 'Je soussigné(e), ' + tx(dv.client.name || '') + ', en qualité de preneur de la prestation, certifie que les travaux objet du présent devis portent sur un local à usage d\'habitation achevé depuis plus de deux ans, qu\'ils n\'ont pas concouru, sur une période de deux ans au plus, à la production d\'un immeuble neuf, et qu\'ils n\'augmentent pas la surface de plancher des locaux existants de plus de 10 %.';
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    var certLines = tva10 ? doc.splitTextToSize(certification, R - L - 6) : [];
+    var certHeight = tva10 ? 11 + certLines.length * 4 + 13 : 0;
+    if (y + (tva10 ? certHeight + 4 : 0) + 36 > H - 16) { doc.addPage(); y = 20; }
     if (tva10) {
-      doc.setDrawColor(OCRE[0], OCRE[1], OCRE[2]); doc.setLineWidth(0.6); doc.rect(L, y, R - L, 19);
+      doc.setDrawColor(OCRE[0], OCRE[1], OCRE[2]); doc.setLineWidth(0.6); doc.rect(L, y, R - L, certHeight);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9); color(PETROLE);
       doc.text('Certification du client pour le taux réduit de TVA', L + 3, y + 5.5);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); color(ANTHRA);
-      doc.text(doc.splitTextToSize('[Mention de certification TVA à taux réduit - texte à valider par le comptable]', R - L - 6), L + 3, y + 11);
-      y += 23;
+      doc.text(certLines, L + 3, y + 11);
+      var dateY = y + 13 + certLines.length * 4;
+      doc.text('Date :', L + 3, dateY);
+      doc.line(L + 16, dateY + 0.8, L + 62, dateY + 0.8);
+      doc.text('Signature du client :', L + 82, dateY);
+      doc.line(L + 119, dateY + 0.8, R - 3, dateY + 0.8);
+      y += certHeight + 4;
     }
     doc.setDrawColor(PETROLE[0], PETROLE[1], PETROLE[2]); doc.setLineWidth(0.4); doc.rect(L, y, R - L, 36);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); color(PETROLE);
