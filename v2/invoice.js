@@ -102,7 +102,7 @@
   y+=4;if(i.obj){pdf.setFont('helvetica','bold');pdf.text(pdf.splitTextToSize('Objet : '+i.obj,mm),15,y);y+=9;}
   if(i.site){pdf.setFont('helvetica','normal');pdf.text(pdf.splitTextToSize('Chantier : '+i.site,mm),15,y);y+=9;}
   pdf.autoTable({startY:y,margin:{left:15,right:15,bottom:28},head:[['Prestation','Qté','Unité','P.U. HT','Total HT']],
-   body:i.lines.map(l=>[String(l.label||'').replace(/²/g,'2'),String(l.qty),String(l.unit||''),money(l.price),money(Calc.lineTotalCents(l)/100)]),
+   body:i.lines.map(l=>[String(l.label||'').replace(/\bm2\b/gi,'m²'),String(l.qty),String(l.unit||'').replace(/\bm2\b/gi,'m²'),money(l.price),money(Calc.lineTotalCents(l)/100)]),
    theme:'grid',styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:[31,78,95]},columnStyles:{1:{halign:'right'},3:{halign:'right'},4:{halign:'right'}}});
   y=pdf.lastAutoTable.finalY+9;
   if(y>235){pdf.addPage();y=20;}
