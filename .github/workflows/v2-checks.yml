@@ -53,6 +53,8 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund playwright@1.58.2
           npx playwright install chromium --with-deps
+      - name: Installer outils de rendu et contrôle PDF
+        run: sudo apt-get update -qq && sudo apt-get install -y poppler-utils
       - name: Recette navigateur (ordinateur + téléphone simulé + avion)
         run: node tests/browser_v2.js
       - name: Publier le rapport d’essais
@@ -63,4 +65,5 @@ jobs:
           path: |
             tests/browser-results.json
             tests/screenshots/*.png
+            tests/screenshots/*.pdf
           if-no-files-found: ignore
