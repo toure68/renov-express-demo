@@ -144,9 +144,9 @@ function contactView(d){
   '<section class="re-action-message"><div class="re-action-label">Message de '+(kind==='deposit'?'demande':'relance')+' préparé</div><p>'+esc(msg)+'</p></section>'+
   (d.demo?
     '<div class="re-action-demo" role="note"><strong>Simulation uniquement</strong><p>Ce dossier est fictif : aucun message ne peut être envoyé à un client réel.</p></div>'+
-    '<div class="re-primary-next">'+primaryButton('viewDossier',d.id,'Voir le dossier complet','eye')+'</div>':
+    '':
     '<div class="re-action-send"><p class="re-action-label">Choisir le canal d’envoi</p>'+contactButtons(d,kind,title)+'</div>')+
-  (kind==='deposit'&&!d.demo?'<details class="re-more"><summary>Acompte déjà reçu ?</summary><p>Ne confirmez cette étape qu’après vérification du règlement.</p>'+secondaryButton('recordDeposit',d.id,'Confirmer l’acompte reçu','check')+'</details>':'')+
+  (kind==='deposit'?'<div class="re-action-secondary"><p class="fine">Si le client a déjà payé, enregistrez uniquement la somme réellement reçue.</p>'+secondaryButton('recordDeposit',d.id,'Enregistrer l’acompte reçu','check')+'</div>':'<div class="re-action-secondary"><p class="fine">Si le client a déjà accepté le devis hors de l’application :</p>'+secondaryButton('manual-signed',d.id,'Accord du client déjà obtenu','check')+'</div>')+
   (!d.demo?'<p class="fine">Le message n’est considéré comme envoyé qu’après votre action dans la messagerie.</p>':'');
 }
 
