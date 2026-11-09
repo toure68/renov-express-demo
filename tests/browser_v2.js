@@ -317,6 +317,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
  await run('Vidéo iPhone : bouton Relancer révèle tout le contexte du dossier fictif',async()=>{
   const q=sample('video-relance','sent',{sentAt:'2026-10-31T10:00:00Z',demo:true,num:'D2026-042',client:{name:'Claire Dubois',email:'',tel:''},obj:'Rénovation séjour et chambre'});
   const {page,context,errors}=await contextPage([q],{mobile:true});
+  page.on('dialog',dialog=>dialog.accept());
   await page.goto(host+'/#',{waitUntil:'load'});
   await click(page,'#hero.vedette [data-action="contact"]');
   await page.locator('#sheet.open.big .mbody.on').waitFor();
@@ -328,8 +329,8 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   assert.equal(await page.locator('#service .re-wa, #service .re-mail').count(),0,'Ne jamais envoyer à un faux client');
   assert.equal(await page.locator('#service .re-more').count(),0,'Aucune information de relance importante ne doit rester repliée');
   await page.screenshot({path:'tests/screenshots/09-relance-informations-visibles.png'});
-  await click(page,'#service [data-action="viewDossier"]');
-  await expectText(page,'.re-progress-current','À relancer');
+  await click(page,'#service [data-action="manual-signed"]');
+  await expectText(page,'.re-progress-current','Signé');
   assert.deepEqual(errors,[]);await context.close();
  });
  await run('Action Relancer réelle : infos client, motif et WhatsApp/email immédiatement visibles',async()=>{
@@ -410,7 +411,6 @@ async function expectText(page,selector,text){await page.locator(selector).filte
   page.on('dialog',dialog=>dialog.accept());
   await page.goto(host+'/#contact/actual-deposit',{waitUntil:'load'});
   await page.locator('#sheet.open.big .mbody.on').waitFor();
-  await page.locator('#service details summary').click();
   await click(page,'#service [data-action="recordDeposit"]');
   await page.locator('[data-field="p.amount"]').waitFor();
   await page.locator('[data-field="p.amount"]').fill('42,50');
