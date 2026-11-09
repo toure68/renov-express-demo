@@ -317,6 +317,7 @@ async function expectText(page,selector,text){await page.locator(selector).filte
  await run('Vidéo iPhone : bouton Relancer révèle tout le contexte du dossier fictif',async()=>{
   const q=sample('video-relance','sent',{sentAt:'2026-10-31T10:00:00Z',demo:true,num:'D2026-042',client:{name:'Claire Dubois',email:'',tel:''},obj:'Rénovation séjour et chambre'});
   const {page,context,errors}=await contextPage([q],{mobile:true});
+  page.on('dialog',dialog=>dialog.accept());
   await page.goto(host+'/#',{waitUntil:'load'});
   await click(page,'#hero.vedette [data-action="contact"]');
   await page.locator('#sheet.open.big .mbody.on').waitFor();
