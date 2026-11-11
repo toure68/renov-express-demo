@@ -16,6 +16,9 @@ var COMPANY = {
   insurerZone: "France métropolitaine",
   mediator: "Médiation Exemple (fictif), 1 rue de l\'Exemple, 75001 Paris, www.mediation-exemple.fr.",
   payment: "Paiement par virement ou chèque.",
+  isEI: "non",             // « oui » : ajoute « Entrepreneur individuel (EI) » à côté du nom sur la facture
+  vatFranchise: "non",     // « oui » : franchise en base de TVA, mention art. 293 B du CGI, TVA à 0 %
+  latePenalty: "Pénalités de retard : trois fois le taux d'intérêt légal, exigibles sans rappel le jour suivant l'échéance.",
   lastNumber: 41,          // dernier devis émis : D2026-041
   validityDays: 30,
   depositRate: 30

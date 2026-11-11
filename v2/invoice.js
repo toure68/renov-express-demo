@@ -33,10 +33,14 @@
   if(!['signed','deposit'].includes(d.status))throw Error('Un accord client est requis avant facturation');
   if(!d.client||!String(d.client.name||'').trim()||!Array.isArray(d.lines)||!d.lines.length)throw Error('Devis incomplet');
   if(d.lines.some(l=>!String(l.label||'').trim()||!(Number(l.qty)>0)||l.price===null||!(Number(l.price)>=0)))throw Error('Prestations incomplètes');
+  const franchise=!!issuer&&issuer.vatFranchise==='oui';
+  if(franchise&&Number(d.tva)!==0&&!d.demo)throw Error('Franchise de TVA : mettez la TVA du devis à 0 % avant de facturer');
+  if(!franchise&&Number(d.tva)===0&&!d.demo)throw Error('TVA à 0 % : activez la franchise de TVA dans Mon entreprise, ou choisissez 10 % ou 20 %');
   const totals=Calc.totals(d),issuedAt=when.toISOString(),year=when.getFullYear();
+  const serviceDate=/^\d{4}-\d{2}-\d{2}$/.test(String(d.serviceDate||''))?d.serviceDate:issuedAt.slice(0,10);
   const due=new Date(when.getTime());due.setDate(due.getDate()+30);
   const doc=clone(d);
-  doc.invoice={num:nextNumber(list,year,!!d.demo),issuedAt,dueDate:due.toISOString().slice(0,10),issuer:clone(issuer),client:clone(d.client),obj:d.obj,site:d.site,lines:clone(d.lines),tva:d.tva,quoteNumber:d.num,totals:clone(totals),demo:!!d.demo};
+  doc.invoice={num:nextNumber(list,year,!!d.demo),issuedAt,serviceDate,nature:'Prestation de services',dueDate:due.toISOString().slice(0,10),issuer:clone(issuer),client:clone(d.client),obj:d.obj,site:d.site,lines:clone(d.lines),tva:d.tva,quoteNumber:d.num,totals:clone(totals),demo:!!d.demo};
   doc.payments=Array.isArray(d.payments)?clone(d.payments):[];
   // Acompte déjà confirmé : crédit enregistré une seule fois à l'émission.
   if(d.status==='deposit'&&!doc.payments.some(p=>p.kind==='deposit')){
@@ -86,21 +90,24 @@
   const mm=180;let y=18;
   const text=(s,x,yy)=>pdf.text(String(s||''),x,yy);
   pdf.setTextColor(31,78,95);pdf.setFont('helvetica','bold');pdf.setFontSize(19);
+  const franchise=c.vatFranchise==='oui',clientPro=/^\d{9}$/.test(String(i.client.siren||'').replace(/\s/g,''));
   text(c.name,15,y);text('FACTURE',152,y);y+=10;
   pdf.setTextColor(45,45,45);pdf.setFont('helvetica','normal');pdf.setFontSize(9.5);
-  const issuerLines=[c.address,c.city,'SIRET : '+c.siret,c.tvaIntra?'TVA : '+c.tvaIntra:'',c.rcs||'',c.email||'',c.phone||''].filter(Boolean);
+  const issuerLines=[c.isEI==='oui'?'Entrepreneur individuel (EI)':'',c.address,c.city,'SIRET : '+c.siret,c.tvaIntra?'TVA : '+c.tvaIntra:'',c.rcs||'',c.email||'',c.phone||''].filter(Boolean);
   issuerLines.forEach(v=>{text(v,15,y);y+=5;});
   y+=7;pdf.setFont('helvetica','bold');pdf.setFontSize(11);text('N° '+i.num,15,y);y+=6;
   pdf.setFont('helvetica','normal');pdf.setFontSize(9.5);
   const frdate=x=>new Date(x).toLocaleDateString('fr-FR');
   text('Émise le : '+frdate(i.issuedAt),15,y);y+=5;
+  text('Date de la prestation (fin des travaux) : '+frdate((i.serviceDate||i.issuedAt.slice(0,10))+'T12:00:00'),15,y);y+=5;
   text('Échéance : '+frdate(i.dueDate+'T12:00:00'),15,y);y+=5;
   text('Devis d’origine : '+(i.quoteNumber||''),15,y);y+=9;
   pdf.setFont('helvetica','bold');text('Facturé à :',15,y);y+=5;
   pdf.setFont('helvetica','normal');
-  [i.client.name,i.client.addr||'',i.client.email||'',i.client.tel||''].filter(Boolean).forEach(v=>{const lines=pdf.splitTextToSize(String(v),mm);pdf.text(lines,15,y);y+=lines.length*5;});
+  [i.client.name,clientPro?'SIREN : '+String(i.client.siren).replace(/\s/g,''):'',i.client.addr||'',i.client.email||'',i.client.tel||''].filter(Boolean).forEach(v=>{const lines=pdf.splitTextToSize(String(v),mm);pdf.text(lines,15,y);y+=lines.length*5;});
   y+=4;if(i.obj){pdf.setFont('helvetica','bold');pdf.text(pdf.splitTextToSize('Objet : '+i.obj,mm),15,y);y+=9;}
-  if(i.site){pdf.setFont('helvetica','normal');pdf.text(pdf.splitTextToSize('Chantier : '+i.site,mm),15,y);y+=9;}
+  if(i.site){pdf.setFont('helvetica','normal');const s=pdf.splitTextToSize('Adresse du chantier : '+i.site,mm);pdf.text(s,15,y);y+=s.length*5+4;}
+  pdf.setFont('helvetica','normal');text('Nature de l’opération : '+(i.nature||'Prestation de services'),15,y);y+=8;
   pdf.autoTable({startY:y,margin:{left:15,right:15,bottom:28},head:[['Prestation','Qté','Unité','P.U. HT','Total HT']],
    body:i.lines.map(l=>[String(l.label||'').replace(/\bm2\b/gi,'m²'),String(l.qty),String(l.unit||'').replace(/\bm2\b/gi,'m²'),money(l.price),money(Calc.lineTotalCents(l)/100)]),
    theme:'grid',styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:[31,78,95]},columnStyles:{1:{halign:'right'},3:{halign:'right'},4:{halign:'right'}}});
@@ -108,12 +115,21 @@
   if(y>235){pdf.addPage();y=20;}
   pdf.setFont('helvetica','bold');pdf.setFontSize(10);
   text('Total HT : '+money(t.ht),105,y);y+=6;
-  text('TVA '+i.tva+' % : '+money(t.tva),105,y);y+=6;
-  text('TOTAL TTC : '+money(t.ttc),105,y);y+=6;
+  if(franchise){text('TOTAL À PAYER : '+money(t.ttc),105,y);y+=6;}
+  else{text('TVA '+i.tva+' % : '+money(t.tva),105,y);y+=6;text('TOTAL TTC : '+money(t.ttc),105,y);y+=6;}
   if(paid(d)>0){text('Déjà encaissé : '+money(paid(d)),105,y);y+=6;text('RESTE À PAYER : '+money(balance(d)),105,y);y+=8;}
   else y+=4;
   pdf.setFont('helvetica','normal');pdf.setFontSize(9);
-  const terms=['Paiement : '+(c.payment||'Selon accord contractuel.'),'Échéance : '+frdate(i.dueDate+'T12:00:00')];
+  const terms=[
+   'Paiement : '+(c.payment||'Selon accord contractuel.'),
+   'Échéance : '+frdate(i.dueDate+'T12:00:00'),
+   'Escompte pour paiement anticipé : néant.',
+   c.latePenalty||'Pénalités de retard : trois fois le taux d’intérêt légal, exigibles sans rappel le jour suivant l’échéance.',
+   clientPro?'Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.':'',
+   franchise?'TVA non applicable, art. 293 B du code général des impôts.':'',
+   !franchise&&Number(i.tva)===10?'TVA au taux réduit de 10 % (travaux d’amélioration, de transformation, d’aménagement et d’entretien de locaux d’habitation achevés depuis plus de deux ans), sur la base de la certification signée par le client sur le devis '+(i.quoteNumber||'')+'.':'',
+   c.insurer?'Assurance décennale : '+c.insurer+(c.insurerPolicy?', contrat n° '+c.insurerPolicy:'')+(c.insurerZone?', couverture '+c.insurerZone:'')+'.':''
+  ].filter(Boolean);
   terms.forEach(v=>{const lines=pdf.splitTextToSize(v,mm);if(y+lines.length*5>268){pdf.addPage();y=20;}pdf.text(lines,15,y);y+=lines.length*5+2;});
   if(Array.isArray(d.payments)&&d.payments.length){y+=3;if(y>258){pdf.addPage();y=20;}pdf.setFont('helvetica','bold');text('Règlements enregistrés : '+money(paid(d)),15,y);y+=6;text('Reste dû : '+money(balance(d)),15,y);}
   const count=pdf.getNumberOfPages();

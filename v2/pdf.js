@@ -105,6 +105,7 @@
       'Assurance décennale : ' + C.insurer + ', contrat n° ' + C.insurerPolicy + ', couverture ' + C.insurerZone + '.',
       'Médiateur de la consommation : ' + ((!C.mediator || /^\s*\[?à compléter\]?\s*$/i.test(C.mediator)) ? "Médiation Exemple (fictif), 1 rue de l'Exemple, 75001 Paris, www.mediation-exemple.fr." : C.mediator)
     ];
+    if (C.vatFranchise === 'oui') cond.push('TVA non applicable, art. 293 B du code général des impôts.');
     var tva10 = +dv.tva === 10;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
     var condLines = cond.map(function (c) { return doc.splitTextToSize(c, R - L); });

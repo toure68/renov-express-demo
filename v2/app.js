@@ -22,7 +22,7 @@ function demonstration(){
 }
 let D=load(K.devis,null);if(!Array.isArray(D)){D=load(K.demo,'on')==='off'?[]:demonstration();store(K.devis,D);}
 const demoActive=()=>D.some(d=>d.demo);
-const companyFields=['name','activity','address','city','phone','email','siret','tvaIntra','rcs','insurer','insurerPolicy','insurerZone','mediator','payment','validityDays','depositRate'];
+const companyFields=['name','activity','address','city','phone','email','siret','tvaIntra','rcs','insurer','insurerPolicy','insurerZone','mediator','payment','isEI','vatFranchise','latePenalty','validityDays','depositRate'];
 const companySaved=load('re_v2_company',null);if(companySaved&&typeof companySaved==='object')companyFields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(companySaved,k))COMPANY[k]=companySaved[k];});
 let tarifs=load(K.tarifs,null);if(!Array.isArray(tarifs)){tarifs=clone(DEFAULT_TARIFS);store(K.tarifs,tarifs);}
 let pendingInvoiceId=null;
@@ -115,7 +115,7 @@ function rendreHero(){const h=$('#hero'),d=F.prioritaire(D);HEROD=d;
 function documentKindLabel(d){return F.documentKind(d)==='invoices'?'facture facturé':'devis';}
 function rendreGains(){rendreHero();const searching=GLOBAL_QUERY.trim().length>0;const list=(searching?D:D.filter(F.needsAttention)).filter(d=>!searching||norm([d.client.name,d.num,d.invoice&&d.invoice.num,d.obj,d.client.email,d.client.tel,d.date,documentKindLabel(d)].join(' ')).includes(norm(GLOBAL_QUERY))).sort(F.ordre),visible=searching||EXPLORER?list:list.slice(0,3),remaining=list.length-visible.length;
  $('#exampleLabel').textContent=demoActive()?'exemples fictifs':'';
- $('#gains').innerHTML=visible.map(row).join('')+(list.length?'':'<p class="empty">'+(searching?'Aucun dossier trouvé.':'Aucun devis à suivre pour le moment.')+'</p>');
+ $('#gains').innerHTML=(searching?'':backupReminder())+visible.map(row).join('')+(list.length?'':'<p class="empty">'+(searching?'Aucun dossier trouvé.':'Aucun devis à suivre pour le moment.')+'</p>');
  $('#quoteExplorer').innerHTML=searching?'':(remaining>0?'<button class="all explorer" data-action="explorer">Explorer · '+remaining+' autre'+(remaining>1?'s':'')+'</button>':EXPLORER&&list.length>3?'<button class="all explorer" data-action="explorer">Réduire</button>':'');
  const quotes=F.historyDocuments(D,'quotes').length,invoices=D.filter(d=>!!d.invoice).length;
  $('#quotesCount').textContent=quotes+' devis';if($('#invoicesArchive'))$('#invoicesArchive').hidden=!AppConfig.features.invoicing;
@@ -161,7 +161,8 @@ function optionsView(d){
  return head('Options du dossier',d.num,d)+'<div class="card"><div class="chxs">'+(d.invoice||['signed','deposit','invoiced'].includes(d.status)?'':secondaryButton('edit',d.id,'Modifier le devis','pen'))+secondaryButton('duplicate',d.id,'Dupliquer le devis','copy')+'</div></div>'+(d.invoice?'':'<details class="re-more"><summary>Corriger manuellement le suivi</summary><p>À utiliser si une étape a été effectuée en dehors de l’application.</p>'+secondaryButton('status',d.id,'Modifier un état','flag')+'</details>');
 }
 
-function field(label,key,value,type='text',area=false){return'<label class="re-field">'+label+(area?'<textarea data-field="'+key+'" rows="2">'+esc(value)+'</textarea>':'<input data-field="'+key+'" type="'+type+'" value="'+esc(value)+'"'+(type==='email'?' autocomplete="email"':type==='tel'?' inputmode="tel"':/\.(price|qty)$/.test(key)?' inputmode="decimal"':'')+'>')+'</label>';}
+const AUTOCOMPLETE={'client.name':'name','client.addr':'street-address','client.email':'email','client.tel':'tel','c.name':'organization','c.address':'street-address','c.email':'email','c.phone':'tel'};
+function field(label,key,value,type='text',area=false){const fid='f-'+String(key).replace(/[^a-z0-9]/gi,'-'),ac=AUTOCOMPLETE[key]?' autocomplete="'+AUTOCOMPLETE[key]+'"':'';return'<label class="re-field" for="'+fid+'">'+label+(area?'<textarea id="'+fid+'" data-field="'+key+'" rows="2"'+ac+'>'+esc(value)+'</textarea>':'<input id="'+fid+'" data-field="'+key+'" type="'+type+'" value="'+esc(value)+'"'+ac+(type==='tel'?' inputmode="tel"':/\.(price|qty)$/.test(key)?' inputmode="decimal"':'')+'>')+'</label>';}
 function quickTariffsView(){
  const choices=tarifs.map((t,i)=>({t,i})).filter(({t})=>t.label&&Calc.parseNum(t.price)!==null).slice(0,4);
  if(!choices.length)return '';
@@ -169,7 +170,7 @@ function quickTariffsView(){
   choices.map(({t,i})=>'<button type="button" class="re-quick-tariff" data-tarif="'+i+'" data-pick="1"><span>'+esc(t.label)+'</span><small>'+priceLabel(t)+'</small></button>').join('')+
   '</div></div>';
 }
-function editView(d){return head(d.num||'Nouveau devis','Devis de peinture',d)+'<div class="fine" style="text-align:left" id="editNumber">'+esc(d.num||'Nouveau devis')+'</div>'+demoBadge(d)+'<fieldset'+(d.signature?' disabled':'')+'><div class="card"><span class="tag">Client</span>'+field('Nom','client.name',d.client.name)+field('Adresse','client.addr',d.client.addr,'text',true)+field('Email','client.email',d.client.email,'email')+field('Téléphone','client.tel',d.client.tel,'tel')+'</div><div class="card"><span class="tag">Chantier</span>'+field('Objet','obj',d.obj)+field('Adresse du chantier','site',d.site,'text',true)+'</div><h2>Prestations</h2><div id="editLines">'+linesHTML(d)+'</div>'+quickTariffsView()+secondaryButton('pick',d.id,'Toutes les prestations','list')+secondaryButton('free',d.id,'Ajouter une ligne libre','plus')+'<div class="card"><span class="tag">TVA</span><div class="re-tva"><button data-tva="10" class="'+(+d.tva===10?'on':'')+'">10 %</button><button data-tva="20" class="'+(+d.tva===20?'on':'')+'">20 %</button></div><div id="editTotals">'+totalsHTML(d)+'</div></div></fieldset>'+(d.signature?'<div class="hint">Ce devis est signé. Pour le modifier, vous devez d’abord retirer sa signature.</div>':'')+'<div class="actbar">'+primaryButton(d.signature?'unlock':'save',d.id,d.signature?'Retirer la signature pour modifier':'Enregistrer le devis',d.signature?'unlock':'save')+'</div><p class="fine">Enregistrement automatique sur cet appareil.</p>';}
+function editView(d){return head(d.num||'Nouveau devis','Devis de peinture',d)+'<div class="fine" style="text-align:left" id="editNumber">'+esc(d.num||'Nouveau devis')+'</div>'+demoBadge(d)+'<fieldset'+(d.signature?' disabled':'')+'><div class="card"><span class="tag">Client</span>'+field('Nom','client.name',d.client.name)+field('Adresse','client.addr',d.client.addr,'text',true)+field('Email','client.email',d.client.email,'email')+field('Téléphone','client.tel',d.client.tel,'tel')+field('SIREN du client (seulement si c’est une entreprise)','client.siren',d.client.siren||'')+'</div><div class="card"><span class="tag">Chantier</span>'+field('Objet','obj',d.obj)+field('Adresse du chantier','site',d.site,'text',true)+'</div><h2>Prestations</h2><div id="editLines">'+linesHTML(d)+'</div>'+quickTariffsView()+secondaryButton('pick',d.id,'Toutes les prestations','list')+secondaryButton('free',d.id,'Ajouter une ligne libre','plus')+'<div class="card"><span class="tag">TVA</span><div class="re-tva">'+(COMPANY.vatFranchise==='oui'?'<button data-tva="0" class="'+(+d.tva===0?'on':'')+'">0 % (franchise)</button>':'')+'<button data-tva="10" class="'+(+d.tva===10?'on':'')+'">10 %</button><button data-tva="20" class="'+(+d.tva===20?'on':'')+'">20 %</button></div><div id="editTotals">'+totalsHTML(d)+'</div></div></fieldset>'+(d.signature?'<div class="hint">Ce devis est signé. Pour le modifier, vous devez d’abord retirer sa signature.</div>':'')+'<div class="actbar">'+primaryButton(d.signature?'unlock':'save',d.id,d.signature?'Retirer la signature pour modifier':'Enregistrer le devis',d.signature?'unlock':'save')+'</div><p class="fine">Enregistrement automatique sur cet appareil.</p>';}
 function linesHTML(d){return d.lines.map((l,i)=>'<div class="card re-line" data-line="'+i+'">'+field('Prestation','line.'+i+'.label',l.label,'text',true)+'<div class="re-grid three">'+field('Quantité','line.'+i+'.qty',Calc.qty(l.qty,''))+field('Unité','line.'+i+'.unit',surfaceUnit(l.unit))+field('Prix HT €','line.'+i+'.price',l.price===null?'':String(l.price).replace('.',','))+'</div><div class="re-foot"><button class="lien re-del" data-action="deleteLine" data-i="'+i+'">'+bi('trash')+'<span>Supprimer</span></button><b data-line-total>'+Calc.money(Calc.lineTotalCents(l)/100)+'</b></div>'+(l.price===null?'<p class="re-error">Prix à saisir : prestation sur devis.</p>':'')+'</div>').join('')||'<p class="empty">Aucune prestation pour l’instant.</p>';}
 function totalsHTML(d){const t=Calc.totals(d);return[['Total HT',t.ht],['TVA '+d.tva+' %',t.tva],['Total TTC',t.ttc],['Acompte 30 %',t.acompte]].map(x=>'<div class="opt'+(x[0]==='Total TTC'?' re-total-ttc':'')+'"><span>'+x[0]+'</span><b>'+Calc.money(x[1])+'</b></div>').join('');}
 function priceLabel(t){const p=Calc.parseNum(t.price);return p===null?'Sur devis':Calc.money(p)+(t.unit?' / '+esc(surfaceUnit(t.unit)):'');}
@@ -182,10 +183,18 @@ function statusView(d){
  return head('Suivi manuel',d.num,d)+(allowed.length?'<div class="card"><p>Choisissez uniquement une action déjà réalisée, hors de cette application.</p>'+allowed.map(([key,label])=>secondaryButton('manual-'+key,d.id,label,'check')).join('')+'</div>':'<p class="empty">Aucune correction manuelle nécessaire pour cette étape.</p>')+'<p class="fine">Ces déclarations ne prouvent pas la livraison du message, la signature ou le paiement.</p>';
 }
 
-function backupData(){const payload={format:'renov-express-v2-backup',version:1,exportedAt:new Date().toISOString(),devis:D,tarifs,company:clone(COMPANY)};try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RenovExpress_sauvegarde_'+localISO(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast('Sauvegarde téléchargée. Conservez-la dans un emplacement privé.');}catch(e){toast('Impossible de créer la sauvegarde.');}}
+// Rappel de sauvegarde : les données ne vivent que sur cet appareil.
+function backupReminder(){
+ if(!D.some(d=>!d.demo))return '';
+ const last=load('re_v2_last_backup',null),t=last?new Date(last).getTime():NaN;
+ if(Number.isFinite(t)&&Date.now()-t<7*864e5)return '';
+ return '<div class="card re-backup-reminder" role="status"><p><b>Sauvegardez vos devis.</b> '+(Number.isFinite(t)?'Dernière sauvegarde le '+displayDate(last)+'.':'Aucune sauvegarde pour le moment.')+' Vos documents sont enregistrés uniquement sur cet appareil.</p>'+primaryButton('backup','','Télécharger une sauvegarde','download')+'</div>';
+}
+function backupData(){const payload={format:'renov-express-v2-backup',version:1,exportedAt:new Date().toISOString(),devis:D,tarifs,company:clone(COMPANY)};try{const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='RenovExpress_sauvegarde_'+localISO(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);store('re_v2_last_backup',new Date().toISOString());rendreGains();toast('Sauvegarde téléchargée. Conservez-la dans un emplacement privé.');}catch(e){toast('Impossible de créer la sauvegarde.');}}
 function companyView(){
- const labels={name:'Raison sociale',activity:'Activité',address:'Adresse',city:'Code postal et ville',phone:'Téléphone',email:'Email professionnel',siret:'SIRET (14 chiffres)',tvaIntra:'TVA intracommunautaire',rcs:'RCS / capital',insurer:'Assureur',insurerPolicy:'Numéro de police',insurerZone:'Zone de couverture',mediator:'Médiateur consommation',payment:'Conditions de paiement'};
- return head('Mon entreprise','Coordonnées utilisées dans les PDF')+'<div class="card"><p>'+(pendingInvoiceId?'Complétez les champs indiqués pour revenir au devis et émettre sa facture. ':'')+'Vérifiez les informations légales avant d’émettre un document réel.</p>'+(pendingInvoiceId?'<p class="re-error">Champs à corriger : '+esc(InvoiceLogic.issuerProblems(COMPANY).join(', '))+'</p>':'')+Object.keys(labels).map(k=>field(labels[k],'c.'+k,COMPANY[k]||'',k==='email'?'email':'text',k==='payment')).join('')+'</div><div class="actbar">'+primaryButton('saveCompany','','Enregistrer mon entreprise','save')+'</div>';
+ const labels={name:'Raison sociale',activity:'Activité',address:'Adresse',city:'Code postal et ville',phone:'Téléphone',email:'Email professionnel',siret:'SIRET (14 chiffres)',tvaIntra:'TVA intracommunautaire',rcs:'RCS / capital',insurer:'Assureur',insurerPolicy:'Numéro de police',insurerZone:'Zone de couverture',mediator:'Médiateur consommation',payment:'Conditions de paiement',latePenalty:'Pénalités de retard (taux affiché sur la facture)'};
+ const yesNo=(label,key)=>'<label class="re-field">'+label+'<select data-field="c.'+key+'"><option value="non"'+(COMPANY[key]!=='oui'?' selected':'')+'>Non</option><option value="oui"'+(COMPANY[key]==='oui'?' selected':'')+'>Oui</option></select></label>';
+ return head('Mon entreprise','Coordonnées utilisées dans les PDF')+'<div class="card"><p>'+(pendingInvoiceId?'Complétez les champs indiqués pour revenir au devis et émettre sa facture. ':'')+'Vérifiez les informations légales avant d’émettre un document réel.</p>'+(pendingInvoiceId?'<p class="re-error">Champs à corriger : '+esc(InvoiceLogic.issuerProblems(COMPANY).join(', '))+'</p>':'')+Object.keys(labels).map(k=>field(labels[k],'c.'+k,COMPANY[k]||'',k==='email'?'email':'text',k==='payment'||k==='latePenalty')).join('')+yesNo('Entrepreneur individuel (EI)','isEI')+yesNo('Franchise en base de TVA (pas de TVA facturée)','vatFranchise')+'</div><div class="actbar">'+primaryButton('saveCompany','','Enregistrer mon entreprise','save')+'</div>';
 }
 function saveCompany(){
  const next=clone(COMPANY),keys=companyFields.filter(k=>!['validityDays','depositRate'].includes(k));
@@ -224,8 +233,16 @@ function issueInvoice(d){
  }
  const message=d.demo?'Créer une facture de SIMULATION pour ce devis fictif ? Elle sera marquée non valable.':'Créer une facture numérotée avec l’acompte déjà reçu déduit du solde ? Les données du devis seront verrouillées.';
  if(!confirm(message))return false;
+ // Date de la prestation (fin des travaux) : mention obligatoire, distincte de la date d'émission.
+ const today=new Date(),todayFR=today.toLocaleDateString('fr-FR');
+ const answer=prompt('Date de fin des travaux (JJ/MM/AAAA) :',d.serviceDate?displayDate(d.serviceDate):todayFR);
+ if(answer===null)return false;
+ const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(answer.trim());
+ const serviceDate=m?m[3]+'-'+m[2]+'-'+m[1]:'';
+ const sd=new Date(serviceDate+'T12:00:00');
+ if(!serviceDate||Number.isNaN(sd.getTime())||sd.toISOString().slice(0,10)!==serviceDate){toast('Date incorrecte. Format attendu : JJ/MM/AAAA.');return false;}
  try{
-  const next=InvoiceLogic.issue(d,D,COMPANY);
+  const next=InvoiceLogic.issue(Object.assign(clone(d),{serviceDate}),D,COMPANY);
   if(!saveQuote(next)){toast('La facture n’a pas pu être enregistrée. Vérifiez l’espace disponible.');return false;}
   pendingInvoiceId=null;navigate('d/'+d.id);rendreGains();
   toast((d.demo?'Simulation ':'Facture ')+next.invoice.num+' créée · Reste dû : '+Calc.money(InvoiceLogic.balance(next)));
@@ -371,7 +388,7 @@ function preparePdf(d){if(!d||!d.num||!d.client.name.trim()||!d.lines.length||d.
  try{const doc=PDFDevis.build(d),blob=doc.output('blob'),name='Devis_'+d.num+'_RenovExpress.pdf',entry={signature:sig,blob,name,file:new File([blob],name,{type:'application/pdf'})};prepared.set(d.id,entry);return entry;}catch(e){prepared.delete(d.id);toast('Le PDF n’a pas pu être préparé.');return null;}}
 function downloadPDF(d){const f=preparePdf(d);if(!f){toast('Complétez le nom et les prestations pour créer le PDF.');return;}PDFShare.download(f);toast('PDF téléchargé');}
 function updateDoc(d){if(saveQuote(d)){rendreGains();if(routeKind&&routeKind!=='edit')route();return true;}return false;}
-function sendPDF(d){if(!checkReady(d))return;const f=prepared.get(d.id);if(!f||f.signature!==pdfKey(d)){preparePdf(d);toast('PDF préparé. Touchez à nouveau « Envoyer le devis ».');return;}
+function sendPDF(d){if(!checkReady(d))return;const f=prepared.get(d.id);if(!f||f.signature!==pdfKey(d)){toast('Préparation du PDF…');setTimeout(()=>{if(preparePdf(d))toast('PDF préparé. Touchez à nouveau « Envoyer le devis ».');},50);return;}
  const fallback=()=>{PDFShare.download(f);downloaded.add(d.id);toast('PDF téléchargé. Après votre envoi, confirmez-le dans la fiche.');if(routeKind==='d')route();};
  let native=false;try{native=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[f.file]}));}catch(e){}
  if(native){try{navigator.share({files:[f.file]}).then(()=>{downloaded.add(d.id);toast('Partage terminé sur cet appareil. Confirmez uniquement si le devis a bien été envoyé.');if(routeKind==='d')route();}).catch(e=>{if(e&&e.name!=='AbortError')fallback();});}catch(e){fallback();}}else fallback();
