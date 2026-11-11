@@ -89,9 +89,15 @@
   if(i.demo){pdf.setTextColor(170,55,55);pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text('SIMULATION — DOCUMENT FICTIF, NON VALABLE',15,10);}
   const mm=180;let y=18;
   const text=(s,x,yy)=>pdf.text(String(s||''),x,yy);
-  pdf.setTextColor(31,78,95);pdf.setFont('helvetica','bold');pdf.setFontSize(19);
+  // Couleur et logo de l'entreprise, comme sur le devis (brand.config.json).
+  const hasDevis=typeof PDFDevis!=='undefined'&&PDFDevis;
+  const P=hasDevis&&PDFDevis.brandRGB?PDFDevis.brandRGB():[31,78,95];
+  const lg=hasDevis&&PDFDevis.getLogo?PDFDevis.getLogo():null;
+  if(lg&&lg.w&&lg.h){let h=16,w=h*lg.w/lg.h;if(w>70){w=70;h=w*lg.h/lg.w;}const top=i.demo?13:8;try{pdf.addImage(lg.data,'PNG',15,top,w,h);y=top+h+8;}catch(e){}}
+  pdf.setTextColor(P[0],P[1],P[2]);pdf.setFont('helvetica','bold');pdf.setFontSize(19);
+  text('FACTURE',152,18);if(y>18)pdf.setFontSize(14);
   const franchise=c.vatFranchise==='oui',clientPro=/^\d{9}$/.test(String(i.client.siren||'').replace(/\s/g,''));
-  text(c.name,15,y);text('FACTURE',152,y);y+=10;
+  text(c.name,15,y);y+=y>18?7:10;
   pdf.setTextColor(45,45,45);pdf.setFont('helvetica','normal');pdf.setFontSize(9.5);
   const issuerLines=[c.isEI==='oui'?'Entrepreneur individuel (EI)':'',c.address,c.city,'SIRET : '+c.siret,c.tvaIntra?'TVA : '+c.tvaIntra:'',c.rcs||'',c.email||'',c.phone||''].filter(Boolean);
   issuerLines.forEach(v=>{text(v,15,y);y+=5;});
@@ -110,7 +116,7 @@
   pdf.setFont('helvetica','normal');text('Nature de l’opération : '+(i.nature||'Prestation de services'),15,y);y+=8;
   pdf.autoTable({startY:y,margin:{left:15,right:15,bottom:28},head:[['Prestation','Qté','Unité','P.U. HT','Total HT']],
    body:i.lines.map(l=>[String(l.label||'').replace(/\bm2\b/gi,'m²'),Calc.qty(l.qty,' '),String(l.unit||'').replace(/\bm2\b/gi,'m²'),money(l.price),money(Calc.lineTotalCents(l)/100)]),
-   theme:'grid',styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:[31,78,95]},columnStyles:{1:{halign:'right'},3:{halign:'right'},4:{halign:'right'}}});
+   theme:'grid',styles:{font:'helvetica',fontSize:9},headStyles:{fillColor:P},columnStyles:{1:{halign:'right'},3:{halign:'right'},4:{halign:'right'}}});
   y=pdf.lastAutoTable.finalY+9;
   if(y>235){pdf.addPage();y=20;}
   pdf.setFont('helvetica','bold');pdf.setFontSize(10);

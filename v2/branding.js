@@ -4,6 +4,8 @@
  function color(v){return typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);}
  function apply(c){
   if(!c||typeof c!=='object')return;
+  // Couleur principale de l'entreprise, reprise aussi dans les PDF (devis et factures).
+  window.Brand={primary:color(c.primary)?c.primary:null,accent:color(c.accent)?c.accent:null};
   if(color(c.primary))document.documentElement.style.setProperty('--brand-primary',c.primary);
   if(color(c.accent))document.documentElement.style.setProperty('--brand-accent',c.accent);
   const img=document.querySelector('header .name img');

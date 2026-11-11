@@ -26,8 +26,16 @@
   function q(n) { return Calc.qty(n, ' '); }
   function fmtDate(d) { return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear(); }
 
+  // Couleur principale de l'entreprise (brand.config.json), sinon pétrole par défaut.
+  function brandRGB() {
+    var h = g.Brand && g.Brand.primary;
+    if (typeof h !== 'string' || !/^#[0-9a-f]{6}$/i.test(h)) return [31, 78, 95];
+    return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  }
+
   function build(dv) {
     var C = COMPANY;
+    var PETROLE = brandRGB();
     var doc = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
     var W = 210, H = 297, L = 15, R = 195, y;
     function color(c) { doc.setTextColor(c[0], c[1], c[2]); }
@@ -39,7 +47,7 @@
       var lw = logoH * logo.w / logo.h; if (lw > 80) { lw = 80; logoH = lw * logo.h / logo.w; }
       doc.addImage(logo.data, 'PNG', L, top, lw, logoH);
     } else {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(20); color(PETROLE); doc.text("Rénov'Express", L, top + 12); color(ANTHRA);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(20); color(PETROLE); doc.text(tx(C.name || ''), L, top + 12); color(ANTHRA);
     }
     var d0 = new Date(dv.date + 'T12:00:00'), dEnd = new Date(d0.getTime() + C.validityDays * 864e5);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(17); color(PETROLE);
@@ -187,5 +195,5 @@
     return doc;
   }
 
-  g.PDFDevis = { build: build, loadLogo: loadLogo };
+  g.PDFDevis = { build: build, loadLogo: loadLogo, brandRGB: brandRGB, getLogo: function () { return logo; } };
 })(this);
