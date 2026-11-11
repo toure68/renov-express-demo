@@ -122,7 +122,6 @@
   pdf.setFont('helvetica','normal');pdf.setFontSize(9);
   const terms=[
    'Paiement : '+(c.payment||'Selon accord contractuel.'),
-   'Échéance : '+frdate(i.dueDate+'T12:00:00'),
    'Escompte pour paiement anticipé : néant.',
    c.latePenalty||'Pénalités de retard : trois fois le taux d’intérêt légal, exigibles sans rappel le jour suivant l’échéance.',
    clientPro?'Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 €.':'',
@@ -130,8 +129,8 @@
    !franchise&&Number(i.tva)===10?'TVA au taux réduit de 10 % (travaux d’amélioration, de transformation, d’aménagement et d’entretien de locaux d’habitation achevés depuis plus de deux ans), sur la base de la certification signée par le client sur le devis '+(i.quoteNumber||'')+'.':'',
    c.insurer?'Assurance décennale : '+c.insurer+(c.insurerPolicy?', contrat n° '+c.insurerPolicy:'')+(c.insurerZone?', couverture '+c.insurerZone:'')+'.':''
   ].filter(Boolean);
-  terms.forEach(v=>{const lines=pdf.splitTextToSize(v,mm);if(y+lines.length*5>268){pdf.addPage();y=20;}pdf.text(lines,15,y);y+=lines.length*5+2;});
-  if(Array.isArray(d.payments)&&d.payments.length){y+=3;if(y>258){pdf.addPage();y=20;}pdf.setFont('helvetica','bold');text('Règlements enregistrés : '+money(paid(d)),15,y);y+=6;text('Reste dû : '+money(balance(d)),15,y);}
+  pdf.setFontSize(8.5);
+  terms.forEach(v=>{const lines=pdf.splitTextToSize(v,mm);if(y+lines.length*4>276){pdf.addPage();y=20;}pdf.text(lines,15,y);y+=lines.length*4+1.5;});
   const count=pdf.getNumberOfPages();
   for(let page=1;page<=count;page++){pdf.setPage(page);pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(110,110,110);
    text(c.name+' · SIRET '+c.siret,15,286);pdf.text('Facture '+i.num+' · '+page+'/'+count,195,286,{align:'right'});}
