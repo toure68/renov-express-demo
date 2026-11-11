@@ -58,3 +58,6 @@ button:focus-visible,[role=button]:focus-visible,a:focus-visible,input:focus-vis
 .re-quick-tariff:active{transform:scale(.98)}
 .re-invoice-choices .card{margin-bottom:12px}
 .re-invoice-choices .card>.all{margin-top:12px}
+/* Listes de choix (Oui/Non, mode de règlement) : même aspect que les autres champs */
+.re-field select{display:block;width:100%;min-height:44px;margin-top:6px;padding:10px 12px;border-radius:12px;border:1px solid var(--card-line,rgba(255,255,255,.15));background:var(--control-bg,rgba(255,255,255,.06));color:var(--ink,#fff);font:inherit;font-size:16px}
+.re-field select option{color:#1b1b1b;background:#fff}
